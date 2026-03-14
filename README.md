@@ -14,7 +14,7 @@ What you should notice first:
 - `Sound: Off` is optional. Turn it on only if you want music and button audio.
 - The two text boxes are the only inputs you need for your first answer.
 - `Split Universe` is the main button.
-- `Current Universe` is where the answer appears.
+- `Current Universe` is where the relay assignment appears and where you confirm your real branch if needed.
 - `History`, `Profile`, and `Guide` stay visible from the start so you can see the full shape of the app, but they matter more right after the first split.
 
 ## First Minute: Step By Step
@@ -26,10 +26,11 @@ What you should notice first:
 5. In `In the other universe, I will now`, type a different action.
 6. Press `Split Universe`.
 7. Watch the relay sequence finish.
-8. Read `Current Universe` to see which branch this universe selected.
-9. Open `History` to review the branch tree and branch log.
-10. Open `Profile` to see settings, achievements, mastery, and progression.
-11. Use `Guide` if you want the longer explanation, and use `Guide Me` if you want the app to point at the next important control.
+8. Read `Current Universe` to see the relay assignment.
+9. If you actually did the other action in real life, use the confirmation buttons in `Current Universe` to correct the archive.
+10. Open `History` to review the branch tree and branch log.
+11. Open `Profile` to see settings, achievements, mastery, and progression.
+12. Use `Guide` if you want the longer explanation, and use `Guide Me` if you want the app to point at the next important control.
 
 ## What `Guide Me` Does
 
@@ -70,7 +71,8 @@ These optional systems deepen the atmosphere and progression, but they do not ch
 1. Stay on `Split`.
 2. Type two different actions.
 3. Press `Split Universe`.
-4. Read the result.
+4. Read the relay assignment.
+5. Confirm your real branch if you took the other option.
 
 That is the complete fast path.
 

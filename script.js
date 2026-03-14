@@ -138,11 +138,11 @@
     {
       id: "result",
       title: "Read the answer",
-      label: "Read Current Universe to see what this universe selected.",
+      label: "Read Current Universe, then confirm which action you actually took.",
       screen: "bridge",
       target: "resultPanel",
       complete: () => Boolean(state.session.walkthroughResultSeen),
-      guideCopy: "This panel is the answer. It tells you which of the two actions this universe selected.",
+      guideCopy: "This panel shows the relay assignment. If you took the other action in real life, confirm it here so the archive matches reality.",
     },
     {
       id: "history",
@@ -486,6 +486,11 @@
     resultPrimary: document.getElementById("resultPrimary"),
     resultSecondary: document.getElementById("resultSecondary"),
     resultPanel: document.getElementById("resultPanel"),
+    resultConfirm: document.getElementById("resultConfirm"),
+    resultConfirmLead: document.getElementById("resultConfirmLead"),
+    resultConfirmStatus: document.getElementById("resultConfirmStatus"),
+    confirmSelectedButton: document.getElementById("confirmSelectedButton"),
+    confirmOtherButton: document.getElementById("confirmOtherButton"),
     shareButton: document.getElementById("shareButton"),
     exportButton: document.getElementById("exportButton"),
     importButton: document.getElementById("importButton"),
@@ -1589,6 +1594,7 @@
 
     state.local.activeScreen = "bridge";
     state.local.settings.muted = true;
+    syncBranchMetricsFromHistory();
     elements.optionA.value = state.local.draft.optionA;
     elements.optionB.value = state.local.draft.optionB;
     elements.soundToggle.checked = !state.local.settings.muted;
@@ -1657,6 +1663,14 @@
     elements.shareButton.addEventListener("click", async () => {
       getAudioEngine().uiTap();
       await handleShare();
+    });
+    elements.confirmSelectedButton.addEventListener("click", () => {
+      getAudioEngine().uiTap();
+      handleConfirmLatestBranch("selected");
+    });
+    elements.confirmOtherButton.addEventListener("click", () => {
+      getAudioEngine().uiTap();
+      handleConfirmLatestBranch("other");
     });
     elements.exportButton.addEventListener("click", () => {
       getAudioEngine().uiTap();
@@ -2166,6 +2180,7 @@
   }
 
   function render() {
+    syncBranchMetricsFromHistory();
     const walkthrough = getWalkthroughState();
     state.session.walkthroughActive = walkthrough.active;
     state.session.walkthroughStepId = walkthrough.currentStep?.id || null;
@@ -2375,13 +2390,49 @@
     if (!latest) {
       elements.resultPrimary.textContent = "Your universe is stable. No split has been recorded yet.";
       elements.resultSecondary.textContent =
-        "When you initiate a bifurcation, this panel will report your branch.";
+        "When you initiate a bifurcation, this panel will report the relay assignment and let you confirm what you actually did.";
+      elements.resultConfirm.hidden = true;
       elements.shareButton.disabled = true;
       return;
     }
 
     elements.shareButton.disabled = false;
     setResultCopy(latest);
+    renderResultConfirmation(latest);
+  }
+
+  function renderResultConfirmation(record) {
+    if (!record) {
+      elements.resultConfirm.hidden = true;
+      return;
+    }
+
+    const assignedKey = getAssignedBranchKey(record);
+    const assignedText = getAssignedBranchText(record);
+    const otherKey = getOppositeBranchKey(assignedKey);
+    const otherText = getBranchText(record, otherKey);
+    const observedKey = getObservedBranchKey(record);
+
+    elements.resultConfirm.hidden = false;
+    elements.resultConfirmLead.textContent =
+      "The relay can assign a branch, but only you know what you actually did. Confirm it below so History and Profile stay accurate.";
+    elements.confirmSelectedButton.textContent = `I did: ${truncateLabel(assignedText, 42)}`;
+    elements.confirmOtherButton.textContent = `I did: ${truncateLabel(otherText, 42)}`;
+    elements.confirmSelectedButton.classList.toggle("is-active", observedKey === assignedKey);
+    elements.confirmOtherButton.classList.toggle("is-active", observedKey === otherKey);
+    elements.confirmSelectedButton.title = `Confirm that you actually did "${assignedText}".`;
+    elements.confirmOtherButton.title = `Confirm that you actually did "${otherText}".`;
+
+    if (!observedKey) {
+      elements.resultConfirmStatus.textContent =
+        "Unconfirmed. Right now the archive is showing the relay assignment only.";
+      return;
+    }
+
+    elements.resultConfirmStatus.textContent =
+      observedKey === assignedKey
+        ? "Confirmed. The archive now matches the relay assignment."
+        : "Confirmed. You took the other option, so the archive has been corrected to match your real branch.";
   }
 
   function renderTimeline() {
@@ -2428,7 +2479,7 @@
 
     history.forEach((entry, index) => {
       const y = 70 + index * rowHeight;
-      const branchRight = entry.selectedKey === "B";
+      const branchRight = getEffectiveBranchKey(entry) === "B";
       const x = branchRight ? 544 : 216;
       const siblingX = branchRight ? 216 : 544;
 
@@ -2470,7 +2521,7 @@
       label.setAttribute("font-size", "18");
       label.setAttribute("font-family", "Consolas, monospace");
       label.setAttribute("text-anchor", branchRight ? "start" : "end");
-      label.textContent = truncateLabel(entry.selectedText, 26);
+      label.textContent = truncateLabel(getEffectiveBranchText(entry), 26);
       svg.appendChild(label);
 
       const stamp = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -2490,11 +2541,21 @@
       .reverse()
       .forEach((entry) => {
         const fragment = elements.branchLogTemplate.content.cloneNode(true);
+        const assignedKey = getAssignedBranchKey(entry);
+        const observedKey = getObservedBranchKey(entry);
+        const currentKey = getEffectiveBranchKey(entry);
+        const currentText = getEffectiveBranchText(entry);
+        const assignedText = getAssignedBranchText(entry);
+        const otherText = getEffectiveOtherBranchText(entry);
         fragment.querySelector(".branch-log__timestamp").textContent = formatDateTime(entry.createdAt);
-        fragment.querySelector(".branch-log__selected").textContent =
-          `Observed branch: ${entry.selectedText} (${entry.selectedKey})`;
-        fragment.querySelector(".branch-log__rejected").textContent =
-          `Other universe: ${entry.rejectedText}`;
+        fragment.querySelector(".branch-log__selected").textContent = observedKey
+          ? `Current branch: ${currentText} (${currentKey})`
+          : `Relay assignment: ${assignedText} (${assignedKey})`;
+        fragment.querySelector(".branch-log__rejected").textContent = observedKey
+          ? observedKey === assignedKey
+            ? `Relay confirmed. Other universe: ${otherText}`
+            : `Relay originally pointed to ${assignedText}. Other universe: ${otherText}`
+          : "Unconfirmed. Confirm what you actually did from the Split screen.";
         elements.branchLog.appendChild(fragment);
       });
   }
@@ -2800,8 +2861,7 @@
       at: record.createdAt,
     };
     state.local.diagnostics.lastMessage = `Branch resolved at ${formatClock(record.createdAt)}.`;
-    state.local.profile.metrics.splitsCompleted += 1;
-    state.local.profile.metrics[record.selectedKey === "A" ? "branchA" : "branchB"] += 1;
+    syncBranchMetricsFromHistory();
     if (record.ritualPrepared) {
       state.local.profile.metrics.ritualsCompleted += 1;
       grantXp(36);
@@ -2817,7 +2877,7 @@
     state.session.walkthroughResultSeen = false;
     setResultCopy(record);
     completeAllStages();
-    setValidationMessage("Your universe has just split. Consult the resolved branch below.", "warning");
+    setValidationMessage("The relay assignment is ready below. Confirm what you actually did so the archive matches reality.", "warning");
     evaluateProgress();
     persistLocal();
     persistSession();
@@ -2831,6 +2891,42 @@
     if (state.local.activeScreen === "archive") {
       window.setTimeout(scrollTimelineToLatest, 40);
     }
+  }
+
+  function handleConfirmLatestBranch(mode) {
+    const latest = getLatestSplit();
+    if (!latest) {
+      return;
+    }
+
+    const assignedKey = getAssignedBranchKey(latest);
+    const confirmedKey = mode === "other" ? getOppositeBranchKey(assignedKey) : assignedKey;
+    const changed = getObservedBranchKey(latest) !== confirmedKey;
+
+    latest.observedKey = confirmedKey;
+    latest.observedText = getBranchText(latest, confirmedKey);
+    state.session.walkthroughResultSeen = true;
+    syncBranchMetricsFromHistory();
+    state.local.diagnostics.lastMessage =
+      confirmedKey === assignedKey
+        ? "Current branch confirmed from the relay assignment."
+        : "Current branch corrected to the other action.";
+
+    if (state.local.profile.metrics.branchA > 0 && state.local.profile.metrics.branchB > 0) {
+      discoverLore("balanced-signal-note");
+    }
+
+    setValidationMessage(
+      confirmedKey === assignedKey
+        ? "Branch confirmed. History and Profile now reflect the branch you actually took."
+        : "Branch corrected. History and Profile now reflect the other action as your current branch."
+    );
+    if (changed) {
+      evaluateProgress({ silent: true });
+    }
+    persistLocal();
+    persistSession();
+    render();
   }
 
   function handleClearChamber() {
@@ -2871,9 +2967,12 @@
       return;
     }
 
-    const text =
-      `Your universe has just split. You're in the universe in which you should ${latest.selectedText}. ` +
-      `Right now in the other universe, the other you is being told to ${latest.rejectedText}.`;
+    const assignedText = getAssignedBranchText(latest);
+    const currentText = getEffectiveBranchText(latest);
+    const otherText = getEffectiveOtherBranchText(latest);
+    const text = hasObservedBranch(latest)
+      ? `Current branch confirmed: ${currentText}. Relay assignment: ${assignedText}. Other universe: ${otherText}.`
+      : `Relay assignment: ${assignedText}. Confirm what you actually did in the app if you took the other option. Alternate branch: ${otherText}.`;
 
     try {
       if (navigator.share) {
@@ -3000,6 +3099,8 @@
               selectedKey: record.selectedKey === "B" ? "B" : "A",
               selectedText: typeof record.selectedText === "string" ? record.selectedText : "",
               rejectedText: typeof record.rejectedText === "string" ? record.rejectedText : "",
+              observedKey: record.observedKey === "B" ? "B" : record.observedKey === "A" ? "A" : null,
+              observedText: typeof record.observedText === "string" ? record.observedText : "",
               sourceDevice: typeof record.sourceDevice === "string" ? record.sourceDevice : "geneva",
               transport: typeof record.transport === "string" ? record.transport : "live",
               progressLog: Array.isArray(record.progressLog) ? record.progressLog.slice(0, 6) : STAGES.map((stage) => stage.label),
@@ -3157,6 +3258,7 @@
   }
 
   function evaluateProgress(options = {}) {
+    syncBranchMetricsFromHistory();
     const notices = [];
 
     const completedMissions = completeEligibleMissions();
@@ -3344,10 +3446,24 @@
   }
 
   function setResultCopy(record) {
-    elements.resultPrimary.textContent =
-      `Your universe has just split. You're in the universe in which you should ${record.selectedText}.`;
+    const assignedKey = getAssignedBranchKey(record);
+    const assignedText = getAssignedBranchText(record);
+    const currentKey = getEffectiveBranchKey(record);
+    const currentText = getEffectiveBranchText(record);
+    const otherText = getEffectiveOtherBranchText(record);
+
+    if (!hasObservedBranch(record)) {
+      elements.resultPrimary.textContent = `Relay assignment: ${assignedText}.`;
+      elements.resultSecondary.textContent =
+        "Only you know what actually happened. Confirm below if you followed this branch, or correct it if you took the other option.";
+      return;
+    }
+
+    elements.resultPrimary.textContent = `Current branch confirmed: ${currentText}.`;
     elements.resultSecondary.textContent =
-      `And right now in the other universe, the other you is being told to ${record.rejectedText}.`;
+      currentKey === assignedKey
+        ? `The relay originally assigned the same branch. Other universe: ${otherText}.`
+        : `The relay originally assigned ${assignedText}. Other universe: ${otherText}.`;
   }
 
   function validateOptions(optionA, optionB) {
@@ -3642,6 +3758,78 @@
 
   function findLore(loreId) {
     return state.content.lore.find((entry) => entry.id === loreId) || null;
+  }
+
+  function getAssignedBranchKey(record) {
+    return record?.selectedKey === "B" ? "B" : "A";
+  }
+
+  function getObservedBranchKey(record) {
+    if (record?.observedKey === "A" || record?.observedKey === "B") {
+      return record.observedKey;
+    }
+    return null;
+  }
+
+  function hasObservedBranch(record) {
+    return Boolean(getObservedBranchKey(record));
+  }
+
+  function getOppositeBranchKey(key) {
+    return key === "B" ? "A" : "B";
+  }
+
+  function getBranchText(record, key) {
+    if (!record) {
+      return "";
+    }
+
+    if (key === "A") {
+      return (
+        record.optionA ||
+        (getAssignedBranchKey(record) === "A" ? record.selectedText : record.rejectedText) ||
+        ""
+      );
+    }
+
+    return (
+      record.optionB ||
+      (getAssignedBranchKey(record) === "B" ? record.selectedText : record.rejectedText) ||
+      ""
+    );
+  }
+
+  function getAssignedBranchText(record) {
+    return getBranchText(record, getAssignedBranchKey(record));
+  }
+
+  function getEffectiveBranchKey(record) {
+    return getObservedBranchKey(record) || getAssignedBranchKey(record);
+  }
+
+  function getEffectiveBranchText(record) {
+    return getBranchText(record, getEffectiveBranchKey(record));
+  }
+
+  function getEffectiveOtherBranchText(record) {
+    return getBranchText(record, getOppositeBranchKey(getEffectiveBranchKey(record)));
+  }
+
+  function syncBranchMetricsFromHistory() {
+    let branchA = 0;
+    let branchB = 0;
+
+    state.local.history.forEach((record) => {
+      if (getEffectiveBranchKey(record) === "B") {
+        branchB += 1;
+      } else {
+        branchA += 1;
+      }
+    });
+
+    state.local.profile.metrics.splitsCompleted = state.local.history.length;
+    state.local.profile.metrics.branchA = branchA;
+    state.local.profile.metrics.branchB = branchB;
   }
 
   function getLatestSplit() {

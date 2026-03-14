@@ -1023,6 +1023,48 @@ textarea:focus-visible,
   color: var(--muted);
 }
 
+.result-confirm {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(97, 166, 255, 0.12);
+}
+
+.result-confirm[hidden] {
+  display: none;
+}
+
+.result-confirm__lead,
+.result-confirm__status {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.result-confirm__lead {
+  color: var(--muted);
+}
+
+.result-confirm__status {
+  color: var(--cyan);
+  font-family: var(--mono-font);
+}
+
+.result-confirm__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.result-confirm__buttons .pill-button {
+  flex: 1 1 220px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .timeline-frame {
   min-height: 440px;
   max-height: 68vh;
@@ -1679,7 +1721,8 @@ textarea:focus-visible,
   .control-row,
   .archive-actions,
   .result-actions,
-  .mission-actions {
+  .mission-actions,
+  .result-confirm__buttons {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
