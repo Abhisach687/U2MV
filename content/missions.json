@@ -1,0 +1,41 @@
+[
+  {
+    "id": "first-contact",
+    "title": "First Contact",
+    "summary": "Learn the Bridge by inspecting an instrument, preparing an optional ritual, completing a split, and reviewing the Archive and Diagnostics surfaces.",
+    "rewardXp": 160,
+    "rewardArtifactId": "coherence-lens",
+    "steps": [
+      { "type": "inspectCount", "target": 1, "label": "Inspect any Bridge instrument." },
+      { "type": "ritualCount", "target": 1, "label": "Complete one optional ritual." },
+      { "type": "splitCount", "target": 1, "label": "Perform your first split." },
+      { "type": "screenVisit", "screen": "archive", "label": "Open the Archive." },
+      { "type": "screenVisit", "screen": "diagnostics", "label": "Review Diagnostics." }
+    ]
+  },
+  {
+    "id": "branch-cartographer",
+    "title": "Branch Cartographer",
+    "summary": "Move beyond the tutorial layer by inspecting more of the Bridge, discovering lore, and building a small branch history worth studying.",
+    "rewardXp": 190,
+    "rewardArtifactId": "drawer-key",
+    "steps": [
+      { "type": "uniqueHotspotCount", "target": 4, "label": "Inspect four distinct instruments." },
+      { "type": "splitCount", "target": 3, "label": "Record three successful splits." },
+      { "type": "loreCount", "target": 4, "label": "Discover four lore fragments." }
+    ]
+  },
+  {
+    "id": "quiet-parallax",
+    "title": "Quiet Parallax",
+    "summary": "Stabilize the relay through ritual, collect several artifacts, balance your branches, and archive the profile as portable JSON.",
+    "rewardXp": 220,
+    "rewardArtifactId": "cartographer-seal",
+    "steps": [
+      { "type": "ritualCount", "target": 2, "label": "Complete two optional rituals." },
+      { "type": "artifactCount", "target": 3, "label": "Unlock three artifacts." },
+      { "type": "branchBalance", "label": "Resolve both A and B branches at least once." },
+      { "type": "exportCount", "target": 1, "label": "Export your profile as JSON." }
+    ]
+  }
+]

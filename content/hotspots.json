@@ -1,0 +1,80 @@
+[
+  {
+    "id": "relay-prism",
+    "label": "Relay Prism",
+    "shortLabel": "RP",
+    "x": 73,
+    "y": 24,
+    "title": "Relay Prism",
+    "description": "The prism bends relay light into spectral echoes. Branches that should be silent leave a faint cyan afterimage here.",
+    "meta": "Inspecting this lens often reveals the first secret the Bridge is willing to share.",
+    "loreId": "relay-prism-note",
+    "artifactId": "prism-shard",
+    "xp": 22
+  },
+  {
+    "id": "phase-dial",
+    "label": "Phase Dial",
+    "shortLabel": "PD",
+    "x": 29,
+    "y": 28,
+    "title": "Phase Dial",
+    "description": "The dial does not choose outcomes. It only tunes how gracefully the operator crosses the threshold into uncertainty.",
+    "meta": "Useful for optional ritual preparation.",
+    "loreId": "phase-dial-note",
+    "artifactId": "phase-coil",
+    "xp": 22
+  },
+  {
+    "id": "signal-map",
+    "label": "Signal Map",
+    "shortLabel": "SM",
+    "x": 56,
+    "y": 16,
+    "title": "Signal Map",
+    "description": "This starfield map tracks old branch routes. Several vectors end in sectors with no registered universe at all.",
+    "meta": "A favorite instrument for cartographers and completionists.",
+    "loreId": "signal-map-note",
+    "artifactId": "signal-atlas",
+    "xp": 24
+  },
+  {
+    "id": "archive-drawer",
+    "label": "Archive Drawer",
+    "shortLabel": "AD",
+    "x": 22,
+    "y": 68,
+    "title": "Archive Drawer",
+    "description": "The drawer is almost empty, but the felt lining remembers the shape of things that are no longer here.",
+    "meta": "Archive surfaces tend to react after this drawer is inspected.",
+    "loreId": "archive-drawer-note",
+    "artifactId": "drawer-key",
+    "xp": 22
+  },
+  {
+    "id": "waveform-scope",
+    "label": "Waveform Scope",
+    "shortLabel": "WS",
+    "x": 52,
+    "y": 70,
+    "title": "Waveform Scope",
+    "description": "The scope renders hesitation as a shimmer before the split. Some operators come here before entering any choice text at all.",
+    "meta": "Good for lore discovery and atmosphere.",
+    "loreId": "waveform-scope-note",
+    "artifactId": "",
+    "xp": 20
+  },
+  {
+    "id": "lamp-bank",
+    "label": "Lamp Bank",
+    "shortLabel": "LB",
+    "x": 82,
+    "y": 58,
+    "title": "Lamp Bank",
+    "description": "The lamps pulse in advance of the main stage list, as if another machine deeper in the relay knows what is about to happen.",
+    "meta": "One of the easiest hotspots to inspect during the first mission.",
+    "loreId": "lamp-bank-note",
+    "artifactId": "",
+    "xp": 20
+  }
+]

@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Universe Splitter 2.0</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <div class="space-wash" aria-hidden="true"></div>
@@ -24,11 +23,9 @@
             <span class="status-lamp" id="liveLamp" aria-hidden="true"></span>
             <span id="liveStatusText">Standby</span>
           </div>
-          <p class="connection-readout" id="connectionReadout" aria-live="polite">
-            Awaiting mutually exclusive instructions.
-          </p>
+          <p class="connection-readout" id="connectionReadout" aria-live="polite">Awaiting mutually exclusive instructions.</p>
           <div class="status-actions">
-            <button class="pill-button" id="soundQuickToggle" type="button">Sound On</button>
+            <button class="pill-button is-active" id="soundQuickToggle" type="button" aria-pressed="true">Sound On</button>
           </div>
         </div>
 
@@ -66,7 +63,7 @@
               <div class="bridge-mission-banner">
                 <div>
                   <p class="eyebrow">Next Best Step</p>
-                  <p class="bridge-mission-banner__title" id="missionTitle">Awaiting relay brief</p>
+                  <p class="bridge-mission-banner__title" id="missionTitle">First Contact</p>
                 </div>
                 <button class="ghost-button" id="continueMissionButton" type="button">
                   Show Me
@@ -78,19 +75,14 @@
                 <div class="bridge-scene__ring bridge-scene__ring--outer" aria-hidden="true"></div>
                 <div class="bridge-scene__ring bridge-scene__ring--inner" aria-hidden="true"></div>
                 <div class="bridge-scene__scope" aria-hidden="true"></div>
-                <div class="hotspot-layer" id="hotspotLayer"></div>
+                <div class="hotspot-layer" id="hotspotLayer"><button type="button" class="hotspot" aria-label="Relay Prism" style="left: 73%; top: 24%;"><span>RP</span><span class="hotspot__label">Relay Prism</span></button><button type="button" class="hotspot" aria-label="Phase Dial" style="left: 29%; top: 28%;"><span>PD</span><span class="hotspot__label">Phase Dial</span></button><button type="button" class="hotspot" aria-label="Signal Map" style="left: 56%; top: 16%;"><span>SM</span><span class="hotspot__label">Signal Map</span></button><button type="button" class="hotspot" aria-label="Archive Drawer" style="left: 22%; top: 68%;"><span>AD</span><span class="hotspot__label">Archive Drawer</span></button><button type="button" class="hotspot" aria-label="Waveform Scope" style="left: 52%; top: 70%;"><span>WS</span><span class="hotspot__label">Waveform Scope</span></button><button type="button" class="hotspot" aria-label="Lamp Bank" style="left: 82%; top: 58%;"><span>LB</span><span class="hotspot__label">Lamp Bank</span></button></div>
               </div>
 
               <article class="hotspot-card" id="hotspotCard" aria-live="polite">
                 <p class="hotspot-card__eyebrow">Optional Discovery</p>
-                <h3 class="hotspot-card__title" id="hotspotTitle">Inspect the console</h3>
-                <p class="hotspot-card__body" id="hotspotBody">
-                  The Bridge is filled with optional instruments. Inspect any hotspot to uncover lore,
-                  artifacts, and mission progress without interrupting the split flow.
-                </p>
-                <p class="hotspot-card__meta" id="hotspotMeta">
-                  Suggested first click: the relay prism or phase dial.
-                </p>
+                <h3 class="hotspot-card__title" id="hotspotTitle">Relay Prism</h3>
+                <p class="hotspot-card__body" id="hotspotBody">The prism bends relay light into spectral echoes. Branches that should be silent leave a faint cyan afterimage here. The Archivist is still cataloging this instrument.</p>
+                <p class="hotspot-card__meta" id="hotspotMeta">Inspecting this lens often reveals the first secret the Bridge is willing to share.</p>
               </article>
             </section>
 
@@ -101,10 +93,8 @@
                   <h2>Guided Progress</h2>
                 </div>
 
-                <p class="mission-summary" id="missionSummary">
-                  Optional challenge guidance appears here. You can ignore it and split immediately.
-                </p>
-                <ol class="mission-steps" id="missionSteps"></ol>
+                <p class="mission-summary" id="missionSummary">Optional challenge: Learn the Bridge by inspecting an instrument, preparing an optional ritual, completing a split, and reviewing the Archive and Diagnostics surfaces.</p>
+                <ol class="mission-steps" id="missionSteps"><li>Inspect any Bridge instrument. (0 / 1)</li><li>Complete one optional ritual. (0 / 1)</li><li>Perform your first split. (0 / 1)</li><li>Open the Archive. (Pending)</li><li>Review Diagnostics. (Pending)</li></ol>
 
                 <div class="mission-actions">
                   <button class="secondary-button" id="briefingButton" type="button">
@@ -145,37 +135,17 @@
                 <form id="splitterForm" class="splitter-form">
                   <label class="input-label" for="optionA">
                     <span>In one universe, I will now</span>
-                    <textarea
-                      id="optionA"
-                      name="optionA"
-                      rows="3"
-                      maxlength="180"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="walk to the corner observatory"
-                      required
-                    ></textarea>
+                    <textarea id="optionA" name="optionA" rows="3" maxlength="180" autocomplete="off" spellcheck="false" placeholder="walk to the corner observatory" required=""></textarea>
                   </label>
 
                   <label class="input-label" for="optionB">
                     <span>In the other universe, I will now</span>
-                    <textarea
-                      id="optionB"
-                      name="optionB"
-                      rows="3"
-                      maxlength="180"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="remain on the bridge"
-                      required
-                    ></textarea>
+                    <textarea id="optionB" name="optionB" rows="3" maxlength="180" autocomplete="off" spellcheck="false" placeholder="remain on the bridge" required=""></textarea>
                   </label>
 
                   <div class="ritual-banner" id="ritualBanner">
                     <p class="ritual-banner__title">Optional ritual not yet stabilized.</p>
-                    <p class="ritual-banner__body">
-                      Inspect two distinct instruments to enrich the atmosphere and earn extra mastery.
-                    </p>
+                    <p class="ritual-banner__body">Inspect two distinct instruments to enrich the atmosphere and earn extra mastery.</p>
                     <div class="ritual-trail" id="ritualTrail"></div>
                   </div>
 
@@ -188,9 +158,7 @@
                       <span class="split-button__halo" aria-hidden="true"></span>
                       <span class="split-button__label">Split Universe</span>
                     </button>
-                    <button class="secondary-button" id="nevermindButton" type="button">
-                      Clear Chamber
-                    </button>
+                    <button class="secondary-button" id="nevermindButton" type="button" disabled="">Clear Chamber</button>
                   </div>
                 </form>
               </section>
@@ -240,16 +208,12 @@
                 </div>
 
                 <div class="result-copy">
-                  <p class="result-copy__primary" id="resultPrimary">
-                    Your universe is stable. No split has been recorded yet.
-                  </p>
-                  <p class="result-copy__secondary" id="resultSecondary">
-                    When you initiate a bifurcation, this panel will report your branch.
-                  </p>
+                  <p class="result-copy__primary" id="resultPrimary">Your universe is stable. No split has been recorded yet.</p>
+                  <p class="result-copy__secondary" id="resultSecondary">When you initiate a bifurcation, this panel will report your branch.</p>
                 </div>
 
                 <div class="result-actions">
-                  <button class="secondary-button" id="shareButton" type="button">
+                  <button class="secondary-button" id="shareButton" type="button" disabled="">
                     Share Result
                   </button>
                   <button class="ghost-button" id="goArchiveButton" type="button">
@@ -313,7 +277,7 @@
               </div>
 
               <div class="mastery-layout">
-                <div class="mastery-ring" id="masteryRing" aria-hidden="true">
+                <div class="mastery-ring" id="masteryRing" aria-hidden="true" style="--ring-progress: 0%;">
                   <div class="mastery-ring__core">
                     <span id="masteryRingValue">1</span>
                     <small>Level</small>
@@ -391,19 +355,19 @@
               <div class="settings-stack">
                 <div class="settings-strip" aria-label="Machine settings">
                   <label class="toggle">
-                    <input id="soundToggle" type="checkbox" />
+                    <input id="soundToggle" type="checkbox">
                     <span>Sound</span>
                   </label>
                   <label class="toggle">
-                    <input id="flashToggle" type="checkbox" />
+                    <input id="flashToggle" type="checkbox">
                     <span>Flash</span>
                   </label>
                   <label class="toggle">
-                    <input id="shakeToggle" type="checkbox" />
+                    <input id="shakeToggle" type="checkbox">
                     <span>Shake</span>
                   </label>
                   <label class="toggle">
-                    <input id="hintToggle" type="checkbox" />
+                    <input id="hintToggle" type="checkbox">
                     <span>Hotspot Hints</span>
                   </label>
                 </div>
@@ -414,7 +378,7 @@
                     <output class="music-slider__value" id="musicVolumeValue" for="musicVolume">100%</output>
                   </div>
                   <div class="music-slider__control">
-                    <input id="musicVolume" type="range" min="0" max="100" step="1" value="100" />
+                    <input id="musicVolume" type="range" min="0" max="100" step="1" value="100">
                   </div>
                   <small class="music-slider__note">
                     This controls the app's music mix. Your phone or PC volume still controls the final loudness.
@@ -491,7 +455,7 @@
       </div>
     </div>
 
-    <input class="is-visually-hidden" id="importInput" type="file" accept="application/json,.json" />
+    <input class="is-visually-hidden" id="importInput" type="file" accept="application/json,.json">
 
     <template id="branchLogTemplate">
       <article class="branch-log__entry">
@@ -502,5 +466,6 @@
     </template>
 
     <script src="script.js"></script>
-  </body>
-</html>
+  
+
+</body></html>

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "relay-prism-note",
+    "title": "Prism Note",
+    "body": "The relay prism produces a ghost image only when the operator truly means both options. Indecision without sincerity leaves the glass dark.",
+    "source": "Recovered from the Relay Prism"
+  },
+  {
+    "id": "phase-dial-note",
+    "title": "Phase Note",
+    "body": "The dial once had numbered positions. Every mark after three was polished away, as if higher settings had been deliberately forgotten.",
+    "source": "Recovered from the Phase Dial"
+  },
+  {
+    "id": "signal-map-note",
+    "title": "Signal Map Note",
+    "body": "The signal map lists routes through impossible coordinates. Several are tagged with operator initials that never appear in the public archive.",
+    "source": "Recovered from the Signal Map"
+  },
+  {
+    "id": "archive-drawer-note",
+    "title": "Drawer Note",
+    "body": "Inside the drawer lining is a pressure mark exactly the size of a missing seal. The Archivist appears to reward replacements over explanations.",
+    "source": "Recovered from the Archive Drawer"
+  },
+  {
+    "id": "waveform-scope-note",
+    "title": "Waveform Note",
+    "body": "The scope measures anticipation rather than outcome. The relay seems more interested in the moment before choice than in choice itself.",
+    "source": "Recovered from the Waveform Scope"
+  },
+  {
+    "id": "lamp-bank-note",
+    "title": "Lamp Bank Note",
+    "body": "The smallest lamp always glows first, but it is not wired into the visible stage list. Something hidden decides the order before the console does.",
+    "source": "Recovered from the Lamp Bank"
+  },
+  {
+    "id": "first-bifurcation-note",
+    "title": "First Bifurcation",
+    "body": "After the first split, the relay stops treating you like a visitor. The Bridge begins to record your presence as part of its own history.",
+    "source": "Unlocked by your first split"
+  },
+  {
+    "id": "balanced-signal-note",
+    "title": "Balanced Signal",
+    "body": "When both branches have been inhabited, the relay tone changes. It becomes less like an oracle and more like a witness.",
+    "source": "Unlocked by balancing branch outcomes"
+  }
+]

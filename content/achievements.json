@@ -1,0 +1,55 @@
+[
+  {
+    "id": "first-gaze",
+    "title": "First Gaze",
+    "description": "Inspect your first Bridge instrument.",
+    "icon": "FG",
+    "type": "inspectCount",
+    "target": 1,
+    "rewardXp": 22
+  },
+  {
+    "id": "first-branch",
+    "title": "First Branch",
+    "description": "Complete your first successful split.",
+    "icon": "FB",
+    "type": "splitCount",
+    "target": 1,
+    "rewardXp": 30
+  },
+  {
+    "id": "ritual-hand",
+    "title": "Ritual Hand",
+    "description": "Complete an optional ritual before a split.",
+    "icon": "RH",
+    "type": "ritualCount",
+    "target": 1,
+    "rewardXp": 28
+  },
+  {
+    "id": "balanced-signal",
+    "title": "Balanced Signal",
+    "description": "Receive both A and B outcomes across your history.",
+    "icon": "BS",
+    "type": "branchBalance",
+    "rewardXp": 34
+  },
+  {
+    "id": "curiosity-loop",
+    "title": "Curiosity Loop",
+    "description": "Discover four lore fragments.",
+    "icon": "CL",
+    "type": "loreCount",
+    "target": 4,
+    "rewardXp": 42
+  },
+  {
+    "id": "memory-keeper",
+    "title": "Memory Keeper",
+    "description": "Export your profile as portable JSON.",
+    "icon": "MK",
+    "type": "exportCount",
+    "target": 1,
+    "rewardXp": 24
+  }
+]
