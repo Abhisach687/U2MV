@@ -101,7 +101,81 @@
 
   const MUSIC_TRACK = {
     src: "assets/sounds/music/main_loop.mp3",
+    silenceThreshold: 0.0035,
+    analysisWindowMs: 60,
+    trimPaddingMs: 40,
+    minLoopSeconds: 18,
   };
+
+  const WALKTHROUGH_STEPS = [
+    {
+      id: "option-a",
+      title: "Write your first action",
+      label: "Type one real action into the first text box.",
+      screen: "bridge",
+      target: "optionA",
+      complete: () => Boolean(elements.optionA.value.trim()) || state.local.history.length > 0,
+      guideCopy: "Start here. Put one concrete action you could do next into the first text box.",
+    },
+    {
+      id: "option-b",
+      title: "Write your second action",
+      label: "Type a different action into the second text box.",
+      screen: "bridge",
+      target: "optionB",
+      complete: () => Boolean(elements.optionB.value.trim()) || state.local.history.length > 0,
+      guideCopy: "Now add a second action. Make it meaningfully different from the first one.",
+    },
+    {
+      id: "split",
+      title: "Trigger the split",
+      label: "Press Split Universe to let the relay choose one branch.",
+      screen: "bridge",
+      target: "splitButton",
+      complete: () => state.local.history.length > 0,
+      guideCopy: "Both actions are in place. Press Split Universe to resolve the branch.",
+    },
+    {
+      id: "result",
+      title: "Read the answer",
+      label: "Read Current Universe to see what this universe selected.",
+      screen: "bridge",
+      target: "resultPanel",
+      complete: () => Boolean(state.session.walkthroughResultSeen),
+      guideCopy: "This panel is the answer. It tells you which of the two actions this universe selected.",
+    },
+    {
+      id: "history",
+      title: "Open History",
+      label: "Visit History to see the branch tree and log.",
+      screen: "bridge",
+      target: "navArchiveButton",
+      complete: () => state.local.history.length > 0 && state.local.profile.visitedScreens.includes("archive"),
+      guideCopy: "Open History next. That is where the branch tree and branch log live.",
+    },
+    {
+      id: "profile",
+      title: "Open Profile",
+      label: "Visit Profile for settings, mastery, and achievements.",
+      screen: "bridge",
+      target: "navDiagnosticsButton",
+      complete: () => state.local.history.length > 0 && state.local.profile.visitedScreens.includes("diagnostics"),
+      guideCopy: "Open Profile next. It contains settings, mastery, achievements, and sound controls.",
+    },
+    {
+      id: "explore",
+      title: "Begin the deeper layer",
+      label: "Inspect a glowing hotspot or open the mission briefing.",
+      screen: "bridge",
+      target: "relay-prism",
+      complete: () =>
+        state.local.profile.metrics.hotspotInspections > 0 ||
+        state.local.profile.completedMissions.length > 0 ||
+        state.local.profile.discoveredHotspots.length > 0,
+      guideCopy:
+        "Now the adventure layer begins. Click a glowing hotspot like the Relay Prism, or open Mission Briefing for a guided quest.",
+    },
+  ];
 
   const FALLBACK_CONTENT = {
     hotspots: [
@@ -369,10 +443,17 @@
     liveStatusText: document.getElementById("liveStatusText"),
     connectionReadout: document.getElementById("connectionReadout"),
     soundQuickToggle: document.getElementById("soundQuickToggle"),
+    navHint: document.getElementById("sceneNavHint"),
+    navBridgeButton: document.getElementById("navBridgeButton"),
+    navArchiveButton: document.getElementById("navArchiveButton"),
+    navDiagnosticsButton: document.getElementById("navDiagnosticsButton"),
+    navManualButton: document.getElementById("navManualButton"),
     profileLevel: document.getElementById("profileLevel"),
     profileTitle: document.getElementById("profileTitle"),
     navButtons: Array.from(document.querySelectorAll("[data-screen-target]")),
     panels: Array.from(document.querySelectorAll("[data-screen-panel]")),
+    bridgeMissionBanner: document.querySelector(".bridge-mission-banner"),
+    missionEyebrow: document.getElementById("missionEyebrow"),
     hotspotLayer: document.getElementById("hotspotLayer"),
     hotspotTitle: document.getElementById("hotspotTitle"),
     hotspotBody: document.getElementById("hotspotBody"),
@@ -387,6 +468,13 @@
     goArchiveButton: document.getElementById("goArchiveButton"),
     ritualBanner: document.getElementById("ritualBanner"),
     ritualTrail: document.getElementById("ritualTrail"),
+    walkthroughEyebrow: document.getElementById("walkthroughEyebrow"),
+    walkthroughTitle: document.getElementById("walkthroughTitle"),
+    walkthroughStatus: document.getElementById("walkthroughStatus"),
+    walkthroughLead: document.getElementById("walkthroughLead"),
+    walkthroughSteps: document.getElementById("walkthroughSteps"),
+    walkthroughFootnote: document.getElementById("walkthroughFootnote"),
+    splitHelper: document.getElementById("splitHelper"),
     form: document.getElementById("splitterForm"),
     optionA: document.getElementById("optionA"),
     optionB: document.getElementById("optionB"),
@@ -397,6 +485,7 @@
     diagnosticsConsole: document.getElementById("diagnosticsConsole"),
     resultPrimary: document.getElementById("resultPrimary"),
     resultSecondary: document.getElementById("resultSecondary"),
+    resultPanel: document.getElementById("resultPanel"),
     shareButton: document.getElementById("shareButton"),
     exportButton: document.getElementById("exportButton"),
     importButton: document.getElementById("importButton"),
@@ -429,6 +518,10 @@
     achievementGrid: document.getElementById("achievementGrid"),
     artifactGrid: document.getElementById("artifactGrid"),
     manualLoreNotes: document.getElementById("manualLoreNotes"),
+    guideCallout: document.getElementById("guideCallout"),
+    guideCalloutEyebrow: document.getElementById("guideCalloutEyebrow"),
+    guideCalloutTitle: document.getElementById("guideCalloutTitle"),
+    guideCalloutBody: document.getElementById("guideCalloutBody"),
     modalBackdrop: document.getElementById("modalBackdrop"),
     modalEyebrow: document.getElementById("modalEyebrow"),
     modalTitle: document.getElementById("modalTitle"),
@@ -475,10 +568,13 @@
       this.context = null;
       this.players = new Map();
       this.music = {
-        player: null,
         failed: false,
         playing: false,
-        source: null,
+        buffer: null,
+        bufferPromise: null,
+        sourceNode: null,
+        loopStart: 0,
+        loopEnd: 0,
       };
       this.musicGain = null;
       this.sfxGain = null;
@@ -547,45 +643,154 @@
         this.players.set(key, audio);
       });
 
-      this.ensureMusicSource();
+      this.preloadMusicBuffer().catch(() => {});
       this.syncAudioState();
     }
 
-    ensureMusicSource() {
+    preloadMusicBuffer() {
       const context = this.ensureBuses();
       if (!context) {
+        return Promise.resolve(null);
+      }
+
+      if (this.music.buffer) {
+        return Promise.resolve(this.music.buffer);
+      }
+
+      if (this.music.bufferPromise) {
+        return this.music.bufferPromise;
+      }
+
+      this.music.bufferPromise = fetch(MUSIC_TRACK.src, { cache: "force-cache" })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Unable to load music track (${response.status}).`);
+          }
+          return response.arrayBuffer();
+        })
+        .then((arrayBuffer) => this.decodeMusicBuffer(context, arrayBuffer))
+        .then((buffer) => {
+          const loopWindow = this.detectLoopWindow(buffer);
+          this.music.buffer = buffer;
+          this.music.loopStart = loopWindow.start;
+          this.music.loopEnd = loopWindow.end;
+          this.music.failed = false;
+          return buffer;
+        })
+        .catch((error) => {
+          this.music.failed = true;
+          throw error;
+        })
+        .finally(() => {
+          this.music.bufferPromise = null;
+        });
+
+      return this.music.bufferPromise;
+    }
+
+    decodeMusicBuffer(context, arrayBuffer) {
+      return new Promise((resolve, reject) => {
+        const audioData = arrayBuffer.slice(0);
+        let settled = false;
+        const once = (callback) => (value) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          callback(value);
+        };
+
+        try {
+          const maybePromise = context.decodeAudioData(
+            audioData,
+            once(resolve),
+            once((error) => reject(error || new Error("Unable to decode the music track.")))
+          );
+          if (maybePromise && typeof maybePromise.then === "function") {
+            maybePromise.then(once(resolve)).catch(once(reject));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    detectLoopWindow(buffer) {
+      const sampleRate = buffer.sampleRate;
+      const analysisWindow = Math.max(
+        1024,
+        Math.floor((MUSIC_TRACK.analysisWindowMs / 1000) * sampleRate)
+      );
+      const trimPadding = (MUSIC_TRACK.trimPaddingMs || 0) / 1000;
+      const minimumLoop = MUSIC_TRACK.minLoopSeconds || 18;
+      let startSample = 0;
+      let endSample = buffer.length;
+
+      while (
+        startSample + analysisWindow < endSample &&
+        this.isSilentWindow(buffer, startSample, startSample + analysisWindow)
+      ) {
+        startSample += analysisWindow;
+      }
+
+      while (
+        endSample - analysisWindow > startSample + analysisWindow &&
+        this.isSilentWindow(buffer, endSample - analysisWindow, endSample)
+      ) {
+        endSample -= analysisWindow;
+      }
+
+      let start = startSample / sampleRate;
+      let end = endSample / sampleRate;
+
+      if (start > trimPadding) {
+        start = Math.max(0, start - trimPadding * 0.5);
+      } else {
+        start = 0;
+      }
+
+      if (buffer.duration - end > trimPadding) {
+        end = Math.max(start + 1, end - trimPadding);
+      } else {
+        end = buffer.duration;
+      }
+
+      if (end - start < minimumLoop) {
+        return { start: 0, end: buffer.duration };
+      }
+
+      return { start, end };
+    }
+
+    isSilentWindow(buffer, startSample, endSample) {
+      const step = 24;
+      const threshold = MUSIC_TRACK.silenceThreshold || 0.0035;
+
+      for (let channelIndex = 0; channelIndex < buffer.numberOfChannels; channelIndex += 1) {
+        const channel = buffer.getChannelData(channelIndex);
+        for (let sampleIndex = startSample; sampleIndex < endSample; sampleIndex += step) {
+          if (Math.abs(channel[sampleIndex]) > threshold) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    createMusicSource(buffer) {
+      const context = this.ensureBuses();
+      if (!context || !this.musicGain) {
         return null;
       }
 
-      if (this.music.player) {
-        this.setMusicVolume(state.local.settings.musicVolume);
-        return this.music.player;
-      }
-
-      const player = new Audio(MUSIC_TRACK.src);
-      player.preload = "auto";
-      player.loop = true;
-      player.playsInline = true;
-      player.volume = 1;
-
-      if (!this.music.source) {
-        this.music.source = context.createMediaElementSource(player);
-        this.music.source.connect(this.musicGain);
-      }
-
-      this.setMusicVolume(state.local.settings.musicVolume);
-      player.addEventListener("canplaythrough", () => {
-        this.music.failed = false;
-      });
-      player.addEventListener("error", () => {
-        this.music.failed = true;
-        this.music.playing = false;
-        if (!state.local.settings.muted) {
-          this.startAmbientFallback();
-        }
-      });
-      this.music.player = player;
-      return player;
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.loopStart = this.music.loopStart || 0;
+      source.loopEnd = this.music.loopEnd || buffer.duration;
+      source.connect(this.musicGain);
+      return source;
     }
 
     getMusicMixLevel(percent = state.local.settings.musicVolume) {
@@ -734,47 +939,66 @@
     }
 
     startMusic() {
-      const player = this.ensureMusicSource();
-      if (!player || this.music.failed) {
-        this.music.playing = false;
-        this.startAmbientFallback();
-        return;
-      }
-
       this.setMusicVolume(state.local.settings.musicVolume);
-      if (!player.paused) {
+
+      if (this.music.sourceNode) {
         this.music.playing = true;
         this.stopAmbientFallback();
         return;
       }
-      const playAttempt = player.play();
 
-      if (playAttempt && typeof playAttempt.then === "function") {
-        playAttempt
-          .then(() => {
-            this.music.failed = false;
-            this.music.playing = true;
-            this.stopAmbientFallback();
-          })
-          .catch(() => {
-            this.music.failed = true;
+      this.preloadMusicBuffer()
+        .then((buffer) => {
+          if (!buffer || state.local.settings.muted || this.music.sourceNode) {
+            return;
+          }
+
+          const source = this.createMusicSource(buffer);
+          if (!source) {
+            throw new Error("Unable to create a music source.");
+          }
+
+          source.onended = () => {
+            if (this.music.sourceNode !== source) {
+              return;
+            }
+
+            try {
+              source.disconnect();
+            } catch (error) {}
+            this.music.sourceNode = null;
             this.music.playing = false;
-            this.startAmbientFallback();
-          });
-        return;
-      }
+          };
 
-      this.music.playing = true;
-      this.stopAmbientFallback();
+          source.start(0, this.music.loopStart || 0);
+          this.music.sourceNode = source;
+          this.music.playing = true;
+          this.music.failed = false;
+          this.stopAmbientFallback();
+        })
+        .catch(() => {
+          this.music.failed = true;
+          this.music.playing = false;
+          if (!state.local.settings.muted) {
+            this.startAmbientFallback();
+          }
+        });
     }
 
     stopMusic() {
-      if (!this.music.player) {
+      if (!this.music.sourceNode) {
+        this.music.playing = false;
         return;
       }
 
+      const source = this.music.sourceNode;
+      this.music.sourceNode = null;
+      source.onended = null;
       try {
-        this.music.player.pause();
+        source.stop();
+      } catch (error) {}
+      try {
+        source.disconnect();
       } catch (error) {}
       this.music.playing = false;
     }
@@ -788,8 +1012,6 @@
           state.local.settings.muted ? 0.0001 : this.getMusicGainValue(safePercent),
           now + 0.12
         );
-      } else if (this.music.player) {
-        this.music.player.volume = this.getMusicMixLevel(safePercent);
       }
 
       if (this.ambient.master) {
@@ -1206,6 +1428,10 @@
     evaluateProgress({ silent: true });
     bindEvents();
     render();
+    if (!state.local.draft.optionA.trim() && !state.local.draft.optionB.trim() && !state.local.history.length) {
+      setValidationMessage("Start with the first text box. Sound is optional; the split is the main path.");
+    }
+    maybeAutoguideWalkthrough();
   }
 
   async function loadContent() {
@@ -1242,7 +1468,7 @@
         optionB: "",
       },
       settings: {
-        muted: false,
+        muted: true,
         musicVolume: 100,
         flashEnabled: !reducedMotionQuery.matches && !coarsePointerQuery.matches,
         shakeEnabled: !reducedMotionQuery.matches && !coarsePointerQuery.matches,
@@ -1285,6 +1511,14 @@
       ritualReady: false,
       splitRun: null,
       onboardingDismissed: false,
+      walkthroughActive: true,
+      walkthroughStepId: "option-a",
+      highlightTarget: null,
+      guideSource: "",
+      guideTitle: "",
+      guideMessage: "",
+      guideAutoShown: false,
+      walkthroughResultSeen: false,
     };
   }
 
@@ -1293,11 +1527,12 @@
     const savedSession = SessionStore.load();
 
     if (savedLocal && typeof savedLocal === "object") {
-      state.local.activeScreen = isValidScreen(savedLocal.activeScreen) ? savedLocal.activeScreen : "bridge";
+      state.local.activeScreen = "bridge";
       state.local.draft.optionA = typeof savedLocal.draft?.optionA === "string" ? savedLocal.draft.optionA : "";
       state.local.draft.optionB = typeof savedLocal.draft?.optionB === "string" ? savedLocal.draft.optionB : "";
       state.local.settings = {
-        muted: Boolean(savedLocal.settings?.muted),
+        muted:
+          typeof savedLocal.settings?.muted === "boolean" ? savedLocal.settings.muted : createDefaultLocalState().settings.muted,
         musicVolume: sanitizePercent(savedLocal.settings?.musicVolume, 100),
         flashEnabled:
           typeof savedLocal.settings?.flashEnabled === "boolean"
@@ -1328,6 +1563,21 @@
       state.session.ritualReady = Boolean(savedSession.ritualReady);
       state.session.splitRun = savedSession.splitRun || null;
       state.session.onboardingDismissed = Boolean(savedSession.onboardingDismissed);
+      state.session.walkthroughActive =
+        typeof savedSession.walkthroughActive === "boolean" ? savedSession.walkthroughActive : true;
+      state.session.walkthroughStepId =
+        typeof savedSession.walkthroughStepId === "string" ? savedSession.walkthroughStepId : "option-a";
+      state.session.highlightTarget =
+        typeof savedSession.highlightTarget === "string" ? savedSession.highlightTarget : null;
+      state.session.guideSource = typeof savedSession.guideSource === "string" ? savedSession.guideSource : "";
+      state.session.guideTitle = typeof savedSession.guideTitle === "string" ? savedSession.guideTitle : "";
+      state.session.guideMessage = typeof savedSession.guideMessage === "string" ? savedSession.guideMessage : "";
+      state.session.guideAutoShown = Boolean(savedSession.guideAutoShown);
+      state.session.walkthroughResultSeen = Boolean(savedSession.walkthroughResultSeen);
+    }
+
+    if (!savedSession || typeof savedSession !== "object") {
+      state.session.walkthroughResultSeen = state.local.history.length > 0;
     }
 
     if (state.session.splitRun?.active) {
@@ -1337,6 +1587,8 @@
       state.session.ritualReady = false;
     }
 
+    state.local.activeScreen = "bridge";
+    state.local.settings.muted = true;
     elements.optionA.value = state.local.draft.optionA;
     elements.optionB.value = state.local.draft.optionB;
     elements.soundToggle.checked = !state.local.settings.muted;
@@ -1473,10 +1725,451 @@
       persistLocal();
     });
 
+    window.addEventListener("resize", () => refreshGuideCallout());
+    window.addEventListener("scroll", () => refreshGuideCallout(), { passive: true });
     window.addEventListener("pagehide", flushPersistedState);
   }
 
+  function getWalkthroughState() {
+    const optionalSoundComplete = !state.local.settings.muted;
+    const stepStates = WALKTHROUGH_STEPS.map((step, index) => ({
+      step,
+      index,
+      complete: Boolean(step.complete()),
+      optional: false,
+    }));
+    const currentStepState = stepStates.find((stepState) => !stepState.complete) || null;
+
+    return {
+      active: Boolean(currentStepState),
+      optionalSoundComplete,
+      stepStates,
+      currentStepState,
+      currentStep: currentStepState ? currentStepState.step : null,
+      currentIndex: currentStepState ? currentStepState.index : stepStates.length,
+    };
+  }
+
+  function getNavButtonForScreen(screen) {
+    switch (screen) {
+      case "bridge":
+        return elements.navBridgeButton;
+      case "archive":
+        return elements.navArchiveButton;
+      case "diagnostics":
+        return elements.navDiagnosticsButton;
+      case "manual":
+        return elements.navManualButton;
+      default:
+        return null;
+    }
+  }
+
+  function resolveGuideTarget(targetKey) {
+    if (!targetKey) {
+      return null;
+    }
+
+    const direct = document.getElementById(targetKey);
+    if (direct) {
+      return direct;
+    }
+
+    return elements.hotspotLayer.querySelector(`[data-hotspot-id="${targetKey}"]`);
+  }
+
+  function hideGuideCallout(persist = true) {
+    document.querySelectorAll(".guide-focus").forEach((node) => node.classList.remove("guide-focus"));
+    elements.guideCallout.classList.add("is-hidden");
+    elements.guideCallout.setAttribute("aria-hidden", "true");
+
+    if (persist) {
+      state.session.highlightTarget = null;
+      state.session.guideSource = "";
+      state.session.guideTitle = "";
+      state.session.guideMessage = "";
+      persistSession();
+    }
+  }
+
+  function positionGuideCallout(target) {
+    if (elements.guideCallout.classList.contains("is-hidden")) {
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const calloutRect = elements.guideCallout.getBoundingClientRect();
+    const gap = 14;
+    let top = rect.bottom + gap;
+    let left = rect.left + rect.width / 2 - calloutRect.width / 2;
+
+    if (top + calloutRect.height > window.innerHeight - 14) {
+      top = Math.max(14, rect.top - calloutRect.height - gap);
+    }
+
+    left = Math.min(window.innerWidth - calloutRect.width - 14, Math.max(14, left));
+
+    elements.guideCallout.style.top = `${top}px`;
+    elements.guideCallout.style.left = `${left}px`;
+  }
+
+  function refreshGuideCallout() {
+    if (elements.guideCallout.classList.contains("is-hidden")) {
+      return;
+    }
+
+    const walkthrough = getWalkthroughState();
+    if (
+      state.session.guideSource === "walkthrough" &&
+      (!walkthrough.currentStep || walkthrough.currentStep.target !== state.session.highlightTarget)
+    ) {
+      hideGuideCallout();
+      return;
+    }
+
+    const target = resolveGuideTarget(state.session.highlightTarget);
+    if (!target) {
+      hideGuideCallout();
+      return;
+    }
+
+    document.querySelectorAll(".guide-focus").forEach((node) => node.classList.remove("guide-focus"));
+    target.classList.add("guide-focus");
+    positionGuideCallout(target);
+  }
+
+  function showGuideCallout(target, config) {
+    if (!target) {
+      return;
+    }
+
+    document.querySelectorAll(".guide-focus").forEach((node) => node.classList.remove("guide-focus"));
+    target.classList.add("guide-focus");
+
+    elements.guideCalloutEyebrow.textContent = config.eyebrow || "Guide Me";
+    elements.guideCalloutTitle.textContent = config.title;
+    elements.guideCalloutBody.textContent = config.body;
+    elements.guideCallout.classList.remove("is-hidden");
+    elements.guideCallout.setAttribute("aria-hidden", "false");
+
+    state.session.highlightTarget = config.targetKey;
+    state.session.guideSource = config.source || "";
+    state.session.guideTitle = config.title;
+    state.session.guideMessage = config.body;
+    persistSession();
+
+    positionGuideCallout(target);
+  }
+
+  function focusGuideTarget(target) {
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: state.local.settings.reducedMotionAware ? "auto" : "smooth",
+      block: "center",
+      inline: "center",
+    });
+
+    if (typeof target.focus === "function") {
+      window.setTimeout(() => {
+        try {
+          target.focus({ preventScroll: true });
+        } catch (error) {
+          try {
+            target.focus();
+          } catch (focusError) {}
+        }
+      }, 90);
+    }
+  }
+
+  function renderWalkthroughList(listElement, walkthrough) {
+    listElement.replaceChildren();
+
+    const optionalSound = document.createElement("li");
+    optionalSound.classList.add("is-optional");
+    optionalSound.classList.toggle("is-complete", walkthrough.optionalSoundComplete);
+    optionalSound.textContent = walkthrough.optionalSoundComplete
+      ? "Optional: sound is on."
+      : "Optional: sound is off by default. Turn it on only if you want ambience.";
+    listElement.appendChild(optionalSound);
+
+    walkthrough.stepStates.forEach((stepState) => {
+      const item = document.createElement("li");
+      item.classList.toggle("is-complete", stepState.complete);
+      item.classList.toggle("is-current", walkthrough.currentStepState?.step.id === stepState.step.id);
+      item.textContent = stepState.step.label;
+      listElement.appendChild(item);
+    });
+  }
+
+  function renderNavGuidance(walkthrough) {
+    const preSplit = state.local.history.length === 0;
+    elements.navButtons.forEach((button) => {
+      const isBridge = button.dataset.screenTarget === "bridge";
+      button.classList.toggle("is-secondary-before-first", preSplit && !isBridge);
+      button.title =
+        preSplit && !isBridge
+          ? "Visible now, but most useful after your first split."
+          : `Open ${button.textContent.trim()}.`;
+    });
+
+    elements.navHint.textContent = preSplit
+      ? "Stay on Split for your first answer. History, Profile, and Guide are visible now so you can see where the journey goes next."
+      : walkthrough.active
+        ? "Your first answer is complete. Follow the next stops to learn History, Profile, and the deeper adventure layer."
+        : "The whole terminal is open now. Split fast when you want an answer, or roam for missions, lore, and progression.";
+  }
+
+  function renderWalkthrough(walkthrough) {
+    renderWalkthroughList(elements.walkthroughSteps, walkthrough);
+
+    if (walkthrough.active) {
+      const firstSplitComplete = state.local.history.length > 0;
+      const currentStep = walkthrough.currentStep;
+      elements.walkthroughEyebrow.textContent = firstSplitComplete ? "Bridge Tour" : "You Arrive At The Bridge";
+      elements.walkthroughTitle.textContent = firstSplitComplete
+        ? "Your first split worked. Learn the rest of the terminal."
+        : "The first minute is simple.";
+      elements.walkthroughStatus.textContent = `Step ${walkthrough.currentIndex + 1} of ${walkthrough.stepStates.length}`;
+      elements.walkthroughLead.textContent = firstSplitComplete
+        ? "You already have an answer. Now follow the guided route through History, Profile, and the first exploration step."
+        : "Sound starts off by default. You only need the two text boxes and Split Universe to get your first answer.";
+      elements.walkthroughFootnote.textContent = currentStep
+        ? `${currentStep.title}. Use Guide Me whenever you want the app to point at the exact next control.`
+        : "Use Guide Me whenever you want the app to point at the exact next control.";
+      elements.splitHelper.textContent = firstSplitComplete
+        ? "The fast loop is still simple: split for an answer, then roam through History, Profile, and the discovery deck when you want more."
+        : "For the fastest first run, ignore the glowing instruments and finish your first split. Nothing optional can bias the result.";
+      return;
+    }
+
+    elements.walkthroughEyebrow.textContent = "Adventure Layer Online";
+    elements.walkthroughTitle.textContent = "The Bridge now responds to curiosity.";
+    elements.walkthroughStatus.textContent = "Walkthrough Complete";
+    elements.walkthroughLead.textContent =
+      "You know the fast split loop now. Keep using Split for quick answers, or lean into missions, hotspots, artifacts, and lore.";
+    elements.walkthroughFootnote.textContent =
+      "Guide Me now points toward the next meaningful mission or exploration step instead of the basic controls.";
+    elements.splitHelper.textContent =
+      "Hotspots, missions, and lore are optional. They deepen the atmosphere and progression, but they never influence which branch is selected.";
+  }
+
+  function renderGuidedProgress(walkthrough) {
+    elements.continueMissionButton.textContent = "Guide Me";
+    elements.continueMissionButton.disabled = false;
+    elements.continueMissionButton.title = walkthrough.active
+      ? "Highlight the exact next walkthrough step."
+      : "Highlight the next mission or exploration step.";
+    elements.bridgeMissionBanner.classList.toggle("is-onboarding", walkthrough.active);
+
+    if (walkthrough.active) {
+      elements.missionEyebrow.textContent = "Arrival Walkthrough";
+      elements.missionTitle.textContent = walkthrough.currentStep?.title || "The Bridge is ready.";
+      elements.missionSummary.textContent =
+        "This is the guided route for your first minutes. The deeper game systems stay visible, but you only need the highlighted next step.";
+      renderMissionStepsList(
+        elements.missionSteps,
+        walkthrough.stepStates.map((stepState) => ({
+          label: stepState.step.label,
+          complete: stepState.complete,
+          current: walkthrough.currentStep?.id === stepState.step.id,
+          progressText: "",
+        }))
+      );
+      return;
+    }
+
+    const mission = getActiveMission();
+    elements.missionEyebrow.textContent = mission ? "Adventure Mission" : "Free Exploration";
+    if (!mission) {
+      elements.missionTitle.textContent = "All primary missions complete";
+      elements.missionSummary.textContent =
+        "The main quest track is complete. Keep splitting for answers, or inspect the Bridge when you want more lore and artifacts.";
+      renderMissionStepsList(elements.missionSteps, []);
+      return;
+    }
+
+    elements.missionTitle.textContent = mission.title;
+    elements.missionSummary.textContent = `Current mission: ${mission.summary}`;
+    renderMissionStepsList(elements.missionSteps, getMissionStepStates(mission));
+  }
+
+  function maybeAutoguideWalkthrough() {
+    const walkthrough = getWalkthroughState();
+    if (!walkthrough.active || state.session.guideAutoShown) {
+      return;
+    }
+
+    state.session.guideAutoShown = true;
+    persistSession();
+    window.setTimeout(() => {
+      guideToWalkthroughStep(walkthrough.currentStep, true);
+    }, 220);
+  }
+
+  function guideToWalkthroughStep(step, auto = false) {
+    if (!step) {
+      hideGuideCallout();
+      return;
+    }
+
+    if (step.screen !== state.local.activeScreen) {
+      setActiveScreen(step.screen);
+    }
+
+    window.setTimeout(() => {
+      const target = resolveGuideTarget(step.target);
+      if (!target) {
+        showModal({
+          eyebrow: "Guide Me",
+          title: step.title,
+          message: step.guideCopy,
+          actions: [{ label: "Close", action: closeModal, variant: "secondary" }],
+        });
+        return;
+      }
+
+      focusGuideTarget(target);
+      showGuideCallout(target, {
+        source: "walkthrough",
+        targetKey: step.target,
+        title: step.title,
+        body: step.guideCopy,
+        eyebrow: auto ? "Bridge Guide" : "Guide Me",
+      });
+
+      if (step.id === "result") {
+        window.setTimeout(() => {
+          state.session.walkthroughResultSeen = true;
+          const walkthrough = getWalkthroughState();
+          renderWalkthrough(walkthrough);
+          renderGuidedProgress(walkthrough);
+          renderNavGuidance(walkthrough);
+          persistSession();
+          refreshGuideCallout();
+        }, 900);
+      }
+    }, step.screen !== state.local.activeScreen ? 180 : 40);
+  }
+
+  function getMissionGuideConfig() {
+    const mission = getActiveMission();
+    if (!mission) {
+      return {
+        screen: "bridge",
+        targetKey: "optionA",
+        title: "Keep splitting or start exploring",
+        body: "All primary missions are complete. Split again for another answer, or inspect the glowing instruments for extra lore.",
+      };
+    }
+
+    const stepState = firstIncompleteStep(mission);
+    if (!stepState) {
+      return {
+        screen: "bridge",
+        targetKey: "optionA",
+        title: mission.title,
+        body: "This mission is already complete. Split again or inspect the Bridge to continue the adventure.",
+      };
+    }
+
+    const step = stepState.step;
+    if (step.type === "screenVisit") {
+      return {
+        screen: "bridge",
+        targetKey: getNavButtonForScreen(step.screen)?.id || "navBridgeButton",
+        title: `Open ${formatScreenName(step.screen)}`,
+        body: step.label,
+      };
+    }
+
+    if (step.type === "exportCount") {
+      return {
+        screen: "archive",
+        targetKey: "exportButton",
+        title: "Export your archive",
+        body: step.label,
+      };
+    }
+
+    if (step.type === "splitCount" || step.type === "branchBalance") {
+      return {
+        screen: "bridge",
+        targetKey: "optionA",
+        title: "Prepare another split",
+        body: step.label,
+      };
+    }
+
+    if (step.type === "artifactCount") {
+      return {
+        screen: state.local.profile.artifacts.length >= (step.target || 0) ? "diagnostics" : "bridge",
+        targetKey:
+          state.local.profile.artifacts.length >= (step.target || 0)
+            ? "navDiagnosticsButton"
+            : suggestHotspot(),
+        title: "Recover more artifacts",
+        body: step.label,
+      };
+    }
+
+    if (step.type === "loreCount") {
+      return {
+        screen: state.local.profile.discoveredLore.length >= (step.target || 0) ? "archive" : "bridge",
+        targetKey:
+          state.local.profile.discoveredLore.length >= (step.target || 0)
+            ? "navArchiveButton"
+            : suggestHotspot(),
+        title: "Recover more lore",
+        body: step.label,
+      };
+    }
+
+    return {
+      screen: "bridge",
+      targetKey: suggestHotspot() || "briefingButton",
+      title: mission.title,
+      body: step.label,
+    };
+  }
+
+  function guideToMissionStep() {
+    const config = getMissionGuideConfig();
+    if (config.screen !== state.local.activeScreen) {
+      setActiveScreen(config.screen);
+    }
+
+    window.setTimeout(() => {
+      const target = resolveGuideTarget(config.targetKey);
+      if (!target) {
+        showModal({
+          eyebrow: "Guide Me",
+          title: config.title,
+          message: config.body,
+          actions: [{ label: "Close", action: closeModal, variant: "secondary" }],
+        });
+        return;
+      }
+
+      focusGuideTarget(target);
+      showGuideCallout(target, {
+        source: "mission",
+        targetKey: config.targetKey,
+        title: config.title,
+        body: config.body,
+        eyebrow: "Mission Guide",
+      });
+    }, config.screen !== state.local.activeScreen ? 180 : 40);
+  }
+
   function render() {
+    const walkthrough = getWalkthroughState();
+    state.session.walkthroughActive = walkthrough.active;
+    state.session.walkthroughStepId = walkthrough.currentStep?.id || null;
+
     elements.navButtons.forEach((button) => {
       button.classList.toggle("is-active", button.dataset.screenTarget === state.local.activeScreen);
     });
@@ -1491,8 +2184,9 @@
     elements.masteryRingValue.textContent = String(levelInfo.level);
     elements.masteryRing.style.setProperty("--ring-progress", `${Math.round(levelInfo.progress * 100)}%`);
     renderSoundToggle();
-
-    renderMission();
+    renderNavGuidance(walkthrough);
+    renderWalkthrough(walkthrough);
+    renderGuidedProgress(walkthrough);
     renderHotspots();
     renderHotspotCard();
     renderRitual();
@@ -1522,6 +2216,9 @@
           : "Standby",
       state.splitInProgress || Boolean(state.local.diagnostics.lastSuccessfulSource)
     );
+
+    refreshGuideCallout();
+    persistSession();
   }
 
   function setActiveScreen(screen) {
@@ -1574,6 +2271,7 @@
     stepStates.forEach((stepState) => {
       const item = document.createElement("li");
       item.classList.toggle("is-complete", stepState.complete);
+      item.classList.toggle("is-current", Boolean(stepState.current));
       item.textContent = stepState.progressText
         ? `${stepState.label} (${stepState.progressText})`
         : stepState.label;
@@ -1588,6 +2286,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "hotspot";
+      button.dataset.hotspotId = hotspot.id;
       button.style.left = `${hotspot.x}%`;
       button.style.top = `${hotspot.y}%`;
       button.setAttribute("aria-label", hotspot.label);
@@ -1611,6 +2310,7 @@
   }
 
   function renderHotspotCard() {
+    const walkthrough = getWalkthroughState();
     const hotspot = getActiveHotspot() || findHotspot(suggestHotspot());
 
     if (!hotspot) {
@@ -1618,6 +2318,14 @@
       elements.hotspotBody.textContent =
         "The Bridge is filled with optional instruments. Inspect any hotspot to uncover lore, artifacts, and mission progress without interrupting the split flow.";
       elements.hotspotMeta.textContent = "Suggested first click: the relay prism or phase dial.";
+      return;
+    }
+
+    if (walkthrough.active && walkthrough.currentStep?.id !== "explore" && !state.session.activeHotspotId) {
+      elements.hotspotTitle.textContent = "Optional discovery panel";
+      elements.hotspotBody.textContent =
+        "You can ignore the glowing instruments until after your first split. They deepen the atmosphere and adventure layer, but they are never required for a fair answer.";
+      elements.hotspotMeta.textContent = "Guide Me will bring you back here when it is time to begin exploring.";
       return;
     }
 
@@ -1925,15 +2633,29 @@
   }
 
   function renderManual() {
+    const walkthrough = getWalkthroughState();
     const mission = getActiveMission();
-    renderMissionStepsList(elements.manualMissionSteps, mission ? getMissionStepStates(mission) : []);
+    renderMissionStepsList(
+      elements.manualMissionSteps,
+      walkthrough.active
+        ? walkthrough.stepStates.map((stepState) => ({
+            label: stepState.step.label,
+            complete: stepState.complete,
+            current: walkthrough.currentStep?.id === stepState.step.id,
+            progressText: "",
+          }))
+        : mission
+          ? getMissionStepStates(mission)
+          : []
+    );
 
     elements.manualLoreNotes.replaceChildren();
     const loreIds = state.local.profile.discoveredLore.slice(-3);
     if (!loreIds.length) {
       const paragraph = document.createElement("p");
-      paragraph.textContent =
-        "The Bridge reveals itself slowly. The more you inspect, split, and review the Archive, the more the relay's hidden history comes into focus.";
+      paragraph.textContent = walkthrough.active
+        ? "You arrive at the Bridge on the Split page. Enter two different actions, press Split Universe, read Current Universe, then use History and Profile to understand the wider terminal."
+        : "The Bridge reveals itself slowly. The more you inspect, split, and review the Archive, the more the relay's hidden history comes into focus.";
       elements.manualLoreNotes.appendChild(paragraph);
       return;
     }
@@ -1951,17 +2673,39 @@
 
   function updateControls() {
     const hasDraft = Boolean(elements.optionA.value.trim() || elements.optionB.value.trim());
+    const latest = getLatestSplit();
+    const walkthrough = getWalkthroughState();
     elements.splitButton.disabled = state.splitInProgress;
     elements.nevermindButton.disabled = !state.splitInProgress && !hasDraft;
     elements.nevermindButton.textContent = state.splitInProgress ? "Nevermind" : "Clear Chamber";
-    elements.shareButton.disabled = !getLatestSplit();
+    elements.shareButton.disabled = !latest;
+    elements.shareButton.title = latest
+      ? "Share the currently resolved branch."
+      : "Complete one split first so there is a branch to share.";
+    elements.nevermindButton.title = state.splitInProgress
+      ? "Cancel the live split sequence."
+      : hasDraft
+        ? "Clear both action chambers."
+        : "Type an action first, then you can clear the chamber.";
+    elements.musicVolume.title = state.local.settings.muted
+      ? "Turn sound on first, then adjust music volume here."
+      : "Adjust the music level for the app mix.";
+    elements.goArchiveButton.title = latest
+      ? "Open History to review previous branches."
+      : "You can open History now, but it becomes useful after your first split.";
+    elements.openManualButton.title = walkthrough.active
+      ? "Open Guide for a fuller explanation of the app."
+      : "Open Guide for controls, lore, and progression help.";
   }
 
   function renderSoundToggle() {
-    const label = state.local.settings.muted ? "Sound Off" : "Sound On";
+    const label = state.local.settings.muted ? "Sound: Off" : "Sound: On";
     elements.soundQuickToggle.textContent = label;
     elements.soundQuickToggle.classList.toggle("is-active", !state.local.settings.muted);
     elements.soundQuickToggle.setAttribute("aria-pressed", String(!state.local.settings.muted));
+    elements.soundQuickToggle.title = state.local.settings.muted
+      ? "Sound is currently off. Turn it on if you want music and button audio."
+      : "Sound is currently on. Turn it off if you want silence.";
     elements.soundToggle.checked = !state.local.settings.muted;
     elements.musicVolume.value = String(state.local.settings.musicVolume);
     elements.musicVolumeValue.textContent = `${state.local.settings.musicVolume}%`;
@@ -1990,10 +2734,15 @@
     state.local.draft.optionB = elements.optionB.value;
     persistLocal();
     updateControls();
+    const walkthrough = getWalkthroughState();
+    renderWalkthrough(walkthrough);
+    renderGuidedProgress(walkthrough);
+    renderNavGuidance(walkthrough);
+    refreshGuideCallout();
 
     const validation = validateOptions(state.local.draft.optionA, state.local.draft.optionB);
     if (!state.local.draft.optionA.trim() && !state.local.draft.optionB.trim()) {
-      setValidationMessage("Enter two distinct actions and await the bifurcation sequence.");
+      setValidationMessage("Start with the first text box. Sound is optional; the split is the main path.");
       return;
     }
 
@@ -2002,7 +2751,7 @@
       return;
     }
 
-    setValidationMessage("Choices calibrated. The relay is ready when you are.", "warning");
+    setValidationMessage("Choices calibrated. Press Split Universe when you are ready.", "warning");
   }
 
   async function handleSplitRequest() {
@@ -2065,6 +2814,7 @@
     }
 
     resetSessionRitual();
+    state.session.walkthroughResultSeen = false;
     setResultCopy(record);
     completeAllStages();
     setValidationMessage("Your universe has just split. Consult the resolved branch below.", "warning");
@@ -2072,6 +2822,11 @@
     persistLocal();
     persistSession();
     render();
+
+    const walkthrough = getWalkthroughState();
+    if (walkthrough.active && walkthrough.currentStep?.id === "result") {
+      guideToWalkthroughStep(walkthrough.currentStep, true);
+    }
 
     if (state.local.activeScreen === "archive") {
       window.setTimeout(scrollTimelineToLatest, 40);
@@ -2098,7 +2853,7 @@
     clearStageClasses();
     clearDiagnostics();
     appendDiagnostic("Chamber cleared.");
-    setValidationMessage("Enter two distinct actions and await the bifurcation sequence.");
+    setValidationMessage("Start with the first text box. Sound is optional; the split is the main path.");
     persistLocal();
     persistSession();
     render();
@@ -2193,7 +2948,9 @@
       getAudioEngine().syncAudioState();
       state.local.profile.metrics.imports += 1;
       state.local.diagnostics.lastMessage = "Archive imported successfully.";
+      state.session.walkthroughResultSeen = state.local.history.length > 0;
       persistLocal();
+      persistSession();
       render();
       showModal({
         eyebrow: "Archive Restored",
@@ -2220,7 +2977,10 @@
 
     return {
       settings: {
-        muted: Boolean(payload.settings?.muted),
+        muted:
+          typeof payload.settings?.muted === "boolean"
+            ? payload.settings.muted
+            : createDefaultLocalState().settings.muted,
         musicVolume: sanitizePercent(payload.settings?.musicVolume, 100),
         flashEnabled:
           typeof payload.settings?.flashEnabled === "boolean" ? payload.settings.flashEnabled : !reducedMotionQuery.matches,
@@ -2276,6 +3036,7 @@
     defaultLocal.diagnostics.contentSource = state.local.diagnostics.contentSource;
     state.local = defaultLocal;
     state.session = createDefaultSessionState();
+    hideGuideCallout(false);
     LocalStore.clear();
     SessionStore.clear();
     elements.optionA.value = "";
@@ -2325,60 +3086,13 @@
   }
 
   function handleContinueMission() {
-    const mission = getActiveMission();
-    if (!mission) {
-      setActiveScreen("bridge");
+    const walkthrough = getWalkthroughState();
+    if (walkthrough.active) {
+      guideToWalkthroughStep(walkthrough.currentStep);
       return;
     }
 
-    const stepState = firstIncompleteStep(mission);
-    if (!stepState) {
-      setActiveScreen("bridge");
-      return;
-    }
-
-    const step = stepState.step;
-    if (step.type === "screenVisit") {
-      setActiveScreen(step.screen);
-      return;
-    }
-
-    if (step.type === "exportCount") {
-      setActiveScreen("archive");
-      elements.exportButton.focus();
-      return;
-    }
-
-    if (step.type === "inspectCount" || step.type === "uniqueHotspotCount" || step.type === "ritualCount") {
-      setActiveScreen("bridge");
-      focusSuggestedHotspot();
-      return;
-    }
-
-    if (step.type === "splitCount" || step.type === "branchBalance") {
-      setActiveScreen("bridge");
-      elements.optionA.focus();
-      return;
-    }
-
-    if (step.type === "loreCount") {
-      if (state.local.profile.discoveredLore.length >= (step.target || 0)) {
-        setActiveScreen("archive");
-      } else {
-        setActiveScreen("bridge");
-        focusSuggestedHotspot();
-      }
-      return;
-    }
-
-    if (step.type === "artifactCount") {
-      if (state.local.profile.artifacts.length >= (step.target || 0)) {
-        setActiveScreen("diagnostics");
-      } else {
-        setActiveScreen("bridge");
-        focusSuggestedHotspot();
-      }
-    }
+    guideToMissionStep();
   }
 
   function focusSuggestedHotspot() {
@@ -2405,6 +3119,7 @@
 
   function showBriefingModal() {
     const mission = getActiveMission();
+    const walkthrough = getWalkthroughState();
     const stepSummary = mission
       ? getMissionStepStates(mission)
           .map((step) => `${step.complete ? "Complete" : "Pending"}: ${step.label}`)
@@ -2412,14 +3127,16 @@
       : "All guided missions complete. Continue exploring at your own pace.";
 
     showModal({
-      eyebrow: "Optional Mission Briefing",
-      title: mission ? mission.title : "Bridge Status",
-      message: mission
-        ? `Use this only if you want a guided challenge. ${mission.summary} ${stepSummary}`
-        : stepSummary,
+      eyebrow: walkthrough.active ? "Arrival Briefing" : "Mission Briefing",
+      title: walkthrough.active ? "Your first route through the Bridge" : mission ? mission.title : "Bridge Status",
+      message: walkthrough.active
+        ? "Stay on Split first. Enter two different actions, resolve your first branch, then use History and Profile before diving into the discovery deck."
+        : mission
+          ? `${mission.summary} ${stepSummary}`
+          : stepSummary,
       actions: [
         {
-          label: "Continue Mission",
+          label: walkthrough.active ? "Guide Me" : "Continue Mission",
           action: () => {
             closeModal();
             handleContinueMission();

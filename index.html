@@ -28,7 +28,7 @@
             Awaiting mutually exclusive instructions.
           </p>
           <div class="status-actions">
-            <button class="pill-button" id="soundQuickToggle" type="button">Sound On</button>
+            <button class="pill-button" id="soundQuickToggle" type="button">Sound: Off</button>
           </div>
         </div>
 
@@ -40,19 +40,33 @@
       </header>
 
       <nav class="scene-nav" aria-label="Universe Splitter views">
-        <button class="scene-nav__button is-active" data-screen-target="bridge" type="button">
+        <button
+          class="scene-nav__button is-active"
+          id="navBridgeButton"
+          data-screen-target="bridge"
+          type="button"
+        >
           Split
         </button>
-        <button class="scene-nav__button" data-screen-target="archive" type="button">
+        <button class="scene-nav__button" id="navArchiveButton" data-screen-target="archive" type="button">
           History
         </button>
-        <button class="scene-nav__button" data-screen-target="diagnostics" type="button">
+        <button
+          class="scene-nav__button"
+          id="navDiagnosticsButton"
+          data-screen-target="diagnostics"
+          type="button"
+        >
           Profile
         </button>
-        <button class="scene-nav__button" data-screen-target="manual" type="button">
+        <button class="scene-nav__button" id="navManualButton" data-screen-target="manual" type="button">
           Guide
         </button>
       </nav>
+
+      <p class="scene-nav__hint" id="sceneNavHint" aria-live="polite">
+        Start on Split. History, Profile, and Guide will make more sense right after your first answer.
+      </p>
 
       <main class="scene-frame">
         <section class="screen-panel is-active" data-screen-panel="bridge">
@@ -65,11 +79,11 @@
 
               <div class="bridge-mission-banner">
                 <div>
-                  <p class="eyebrow">Next Best Step</p>
-                  <p class="bridge-mission-banner__title" id="missionTitle">Awaiting relay brief</p>
+                  <p class="eyebrow" id="missionEyebrow">Arrival Walkthrough</p>
+                  <p class="bridge-mission-banner__title" id="missionTitle">Follow the next step on the Bridge.</p>
                 </div>
                 <button class="ghost-button" id="continueMissionButton" type="button">
-                  Show Me
+                  Guide Me
                 </button>
               </div>
 
@@ -83,13 +97,12 @@
 
               <article class="hotspot-card" id="hotspotCard" aria-live="polite">
                 <p class="hotspot-card__eyebrow">Optional Discovery</p>
-                <h3 class="hotspot-card__title" id="hotspotTitle">Inspect the console</h3>
+                <h3 class="hotspot-card__title" id="hotspotTitle">Optional discovery panel</h3>
                 <p class="hotspot-card__body" id="hotspotBody">
-                  The Bridge is filled with optional instruments. Inspect any hotspot to uncover lore,
-                  artifacts, and mission progress without interrupting the split flow.
+                  The Bridge is filled with optional instruments. You can ignore them until after your first split if you want the fastest route.
                 </p>
                 <p class="hotspot-card__meta" id="hotspotMeta">
-                  Suggested first click: the relay prism or phase dial.
+                  Guide Me will bring you here when it is time to begin exploring.
                 </p>
               </article>
             </section>
@@ -97,7 +110,7 @@
             <div class="bridge-sidebar">
               <section class="glass-panel mission-panel">
                 <div class="panel-heading">
-                  <p class="panel-heading__tag">Optional Game Layer</p>
+                  <p class="panel-heading__tag">Guided Route</p>
                   <h2>Guided Progress</h2>
                 </div>
 
@@ -122,22 +135,24 @@
                   <h2>Split Console</h2>
                 </div>
 
-                <div class="quickstart-card" aria-label="Quick start">
-                  <p class="eyebrow">Start Here</p>
-                  <p class="quickstart-card__title">Use The Split Console First</p>
-                  <p class="quickstart-card__lead">
-                    Treat this as a fast decision tool first. The discovery layer is there if you want extra atmosphere.
+                <div class="quickstart-card walkthrough-card" id="walkthroughCard" aria-label="Arrival walkthrough">
+                  <div class="walkthrough-card__top">
+                    <div>
+                      <p class="eyebrow" id="walkthroughEyebrow">You Arrive At The Bridge</p>
+                      <p class="quickstart-card__title" id="walkthroughTitle">The first minute is simple.</p>
+                    </div>
+                    <span class="walkthrough-status" id="walkthroughStatus">Step 1 of 7</span>
+                  </div>
+                  <p class="quickstart-card__lead" id="walkthroughLead">
+                    Sound starts off by default. You only need the two text boxes and Split Universe to get your first answer.
                   </p>
-                  <ol class="quickstart-list">
-                    <li>Turn on sound if you want ambient audio.</li>
-                    <li>Type two clearly different actions.</li>
-                    <li>Optional: inspect hotspots for lore and ritual flavor.</li>
-                    <li>Press <strong>Split Universe</strong>.</li>
-                    <li>Read the result, then use History or Profile if you want more.</li>
-                  </ol>
+                  <ol class="quickstart-list walkthrough-list" id="walkthroughSteps"></ol>
+                  <p class="walkthrough-footnote" id="walkthroughFootnote">
+                    Use Guide Me whenever you want the app to point at the exact next control.
+                  </p>
                 </div>
 
-                <p class="split-panel__helper">
+                <p class="split-panel__helper" id="splitHelper">
                   Hotspots, missions, and lore are optional. They add atmosphere and progression, but they
                   never influence which branch is selected.
                 </p>
@@ -173,15 +188,15 @@
 
                   <div class="ritual-banner" id="ritualBanner">
                     <p class="ritual-banner__title">Optional ritual not yet stabilized.</p>
-                    <p class="ritual-banner__body">
-                      Inspect two distinct instruments to enrich the atmosphere and earn extra mastery.
-                    </p>
-                    <div class="ritual-trail" id="ritualTrail"></div>
-                  </div>
-
-                  <p class="validation-message" id="validationMessage" aria-live="polite">
-                    Enter two distinct actions and await the bifurcation sequence.
+                  <p class="ritual-banner__body">
+                    Inspect two distinct instruments to enrich the atmosphere and earn extra mastery.
                   </p>
+                  <div class="ritual-trail" id="ritualTrail"></div>
+                </div>
+
+                <p class="validation-message" id="validationMessage" aria-live="polite">
+                  Start with the first text box. Sound is optional; the split is the main path.
+                </p>
 
                   <div class="control-row">
                     <button class="split-button" id="splitButton" type="submit">
@@ -233,7 +248,7 @@
                 </div>
               </section>
 
-              <section class="glass-panel result-panel">
+              <section class="glass-panel result-panel" id="resultPanel">
                 <div class="panel-heading">
                   <p class="panel-heading__tag">Latest Result</p>
                   <h2>Current Universe</h2>
@@ -480,6 +495,12 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <div class="guide-callout is-hidden" id="guideCallout" aria-hidden="true" aria-live="polite">
+      <p class="guide-callout__eyebrow" id="guideCalloutEyebrow">Guide Me</p>
+      <h2 class="guide-callout__title" id="guideCalloutTitle">Start here</h2>
+      <p class="guide-callout__body" id="guideCalloutBody"></p>
     </div>
 
     <div class="modal-backdrop is-hidden" id="modalBackdrop" aria-hidden="true">

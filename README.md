@@ -1,57 +1,84 @@
 # Universe Splitter 2.0
 
-A futuristic, point-and-click reinterpretation of `Universe Splitter` built as a framework-free static web app. It works best as a binary decision ritual first: you enter two different actions, trigger the split, and let the app tell you which branch this universe selected.
+A futuristic, framework-free reinterpretation of `Universe Splitter` built as a static web app. It is designed to feel like a dramatic decision console first, then open into a point-and-click adventure layer after your first resolved branch.
 
-## What You See First
+## User Story: How To Navigate The App
 
-When the app opens, the most important area is the `Split Console` on the Bridge screen.
+You arrive at the Bridge.
 
-- The `Sound On` button starts the ambient soundtrack after your first tap or click.
-- The `Split Console` is where you enter your two possible actions.
-- The glowing hotspot instruments are optional exploration. They add lore and progression, but they do not change the result.
-- The `Latest Result` panel shows the branch chosen for the current universe after each split.
+The app always opens on `Split`, and sound starts `off` by default. This is intentional. The first visit is supposed to feel calm and readable instead of noisy.
 
-## How To Play
+What you should notice first:
 
-1. Open the app and stay on the `Split` screen.
-2. If you want music and sound effects, press `Sound On` once.
-3. In the first text box, enter one action you could do now.
-4. In the second text box, enter a different action you could do instead.
-5. Make sure the two actions are genuinely different. The app blocks blank, identical, or nearly identical choices.
+- `Split` is the main page and the main action.
+- `Sound: Off` is optional. Turn it on only if you want music and button audio.
+- The two text boxes are the only inputs you need for your first answer.
+- `Split Universe` is the main button.
+- `Current Universe` is where the answer appears.
+- `History`, `Profile`, and `Guide` stay visible from the start so you can see the full shape of the app, but they matter more right after the first split.
+
+## First Minute: Step By Step
+
+1. Open the app and stay on `Split`.
+2. Ignore the glowing hotspots for your very first run unless you want extra atmosphere.
+3. If you want audio, tap `Sound: Off` to turn it on.
+4. In `In one universe, I will now`, type one action you could actually do next.
+5. In `In the other universe, I will now`, type a different action.
 6. Press `Split Universe`.
-7. Watch the machine-status sequence move through the split ritual.
-8. Read `Latest Result` to see which action this universe selected.
-9. If you want to compare previous outcomes, open `History`.
-10. If you want settings, achievements, music volume, or progression, open `Profile`.
+7. Watch the relay sequence finish.
+8. Read `Current Universe` to see which branch this universe selected.
+9. Open `History` to review the branch tree and branch log.
+10. Open `Profile` to see settings, achievements, mastery, and progression.
+11. Use `Guide` if you want the longer explanation, and use `Guide Me` if you want the app to point at the next important control.
 
-Quick tips:
+## What `Guide Me` Does
 
-- If you want the fastest experience, ignore the hotspots and just enter two actions and split.
-- Hotspots, missions, and lore are optional. They are there for atmosphere and game-like progression, not for fairness or outcome control.
-- The `Music Volume` slider controls the app's music level, but your phone or PC volume still controls the final speaker loudness.
-- `Export JSON` saves your profile and branch history so you can restore them later with `Import JSON`.
+`Guide Me` is the in-app coach.
 
-## Experience
+- Before your first full tour is complete, it highlights the exact next control you should use.
+- After the basic tour is complete, it shifts into mission guidance and points you toward the next meaningful quest or exploration step.
+- On mobile and desktop, it is meant to remove guessing rather than replace free exploration.
 
-- `Bridge`: the main split console, staged machine ritual, guided mission banner, and optional hotspot interactions.
-- `Archive`: branching timeline, branch log, JSON export/import, and discovered lore fragments.
-- `Diagnostics`: mastery level, split statistics, achievements, artifacts, and accessibility controls.
-- `Field Manual`: onboarding guidance, storage model, and the latest recovered lore notes.
+## What Is Required vs Optional
 
-The point-and-click layer is intentionally optional. You can inspect the scene for lore, artifacts, and mission progress without slowing down the core decision flow.
+Required for the core loop:
 
-## UI Direction
+- enter two different actions
+- press `Split Universe`
+- read `Current Universe`
 
-- Superman-inspired cobalt blue anchors the interface.
-- Hot pink and baby pink are used as tertiary highlight colors so the UI keeps energy without losing hierarchy.
-- Yellow is reserved for the primary action path and positive emphasis because it complements the blue base and keeps the split action easy to find.
-- The bridge layout prioritizes the split workflow first and treats scene exploration as optional.
+Optional, game-like layers:
+
+- glowing hotspot instruments
+- ritual preparation
+- lore fragments
+- artifacts
+- achievements
+- guided missions
+
+These optional systems deepen the atmosphere and progression, but they do not change the fairness of the branch result.
+
+## The Four Main Screens
+
+- `Split`: the main Bridge console where you perform splits and follow the walkthrough.
+- `History`: the archive timeline, branch log, import/export tools, and discovered lore.
+- `Profile`: settings, sound controls, mastery, achievements, and artifacts.
+- `Guide`: the slower explanation of how the system works and what to do next.
+
+## Fastest Way To Play
+
+1. Stay on `Split`.
+2. Type two different actions.
+3. Press `Split Universe`.
+4. Read the result.
+
+That is the complete fast path.
 
 ## Run
 
 This is a static app. Serve the folder with any local static server so the `content/*.json` files can be fetched normally.
 
-Examples:
+Example:
 
 ```powershell
 python -m http.server 8000
@@ -72,18 +99,18 @@ http://localhost:8000/
 http://localhost:8000/?source=stub
 ```
 
-Stub mode preserves the full ritual flow but resolves the branch locally.
+Stub mode preserves the ritual flow but resolves the branch locally.
 
 ## Audio
 
-- The app uses downloaded CC0 Kenney interface sounds for UI taps, relay activation, sweep, success, failure, and mute toggle feedback.
-- The default ambient soundtrack now uses the bundled loop `assets/sounds/music/main_loop.mp3`.
-- The older `busy_cyberworld.ogg` track is no longer the default runtime music.
-- Music and button sounds use separate internal audio buses so UI feedback stays audible while the soundtrack is playing.
-- If the music file cannot be played, the app falls back automatically to the procedural ambient bed.
-- The `Music Volume` slider defaults to `100%` for the app mix, but the actual speaker loudness still depends on your device or system volume.
+- The app boots with sound off by default.
+- The quick button in the header shows the current state as `Sound: Off` or `Sound: On`.
+- Music uses the bundled track at `assets/sounds/music/main_loop.mp3`.
+- Button sounds and music run on separate audio paths so interface feedback stays audible.
+- The music loop is smoothed in the runtime instead of relying only on the browser's basic media-element looping.
+- If the music track cannot be played, the app falls back to the procedural ambient bed.
+- `Music Volume` controls the app mix only. Your phone or PC volume still controls final loudness.
 - Credits are listed in [`assets/sounds/CREDITS.md`](./assets/sounds/CREDITS.md).
-- A quick sound on/off button is available in the main HUD, and the Diagnostics panel keeps the persistent toggle as well.
 
 ## Content JSON
 
@@ -121,11 +148,12 @@ Stored there:
 - hotspots inspected in the current ritual
 - whether the optional ritual is ready
 - in-progress split run state
-- briefing dismissal state for the current tab
+- walkthrough guidance state
+- temporary guide highlight target
 
 ## Export / Import JSON
 
-The Archive view can export the persistent profile as JSON and import it again later.
+The `History` screen can export the persistent profile as JSON and import it again later.
 
 Schema shape:
 
@@ -144,19 +172,17 @@ Schema shape:
 }
 ```
 
-Imports restore persistent state only. Session ritual state is intentionally not imported.
+Imports restore persistent state only. Session walkthrough state is intentionally not imported.
 
 ## Accessibility And UX Notes
 
 - sound, flash, shake, and hotspot hints are individually toggleable
-- music has its own persistent volume slider
+- music has its own volume slider
 - `prefers-reduced-motion` disables flash and shake by default
 - hotspot hints default off on coarse-pointer devices to reduce mobile clutter
 - hotspot interactions are buttons, so they remain keyboard accessible
-- the core split action is always visible and never hidden behind the game layer
-- the bridge screen puts the choice form ahead of the optional discovery panel
-- the hotspot readout is docked below the scene instead of floating over controls
-- validation is inline and failure states preserve the in-universe machine tone
+- the app always opens on `Split`
+- the start screen guides the player toward the first successful split before pushing the optional adventure systems
 
 ## Privacy
 
@@ -169,6 +195,6 @@ User-entered choices stay local to the browser. The app does not send decision t
 
 ## Files
 
-- [`index.html`](./index.html): app shell and all screens
-- [`styles.css`](./styles.css): futuristic HUD styling, motion, and responsive layout
-- [`script.js`](./script.js): runtime, split flow, point-and-click layer, storage, JSON import/export
+- [`index.html`](./index.html): app shell and screen layout
+- [`styles.css`](./styles.css): futuristic HUD styling, motion, walkthrough, and responsive layout
+- [`script.js`](./script.js): runtime, split flow, walkthrough guidance, audio, storage, and missions
