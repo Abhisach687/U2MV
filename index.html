@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universe Splitter</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-noise" aria-hidden="true"></div>
+    <div class="flash-overlay" id="flashOverlay" aria-hidden="true"></div>
+
+    <div class="app-shell" id="appShell">
+      <header class="title-plate">
+        <div class="title-copy">
+          <p class="eyebrow">Aerfish Institute Field Terminal</p>
+          <h1>Universe Splitter</h1>
+          <p class="subtitle">quantum-induced universe bifurcation</p>
+        </div>
+
+        <div class="machine-status">
+          <div class="status-pill">
+            <span class="status-pill__lamp" id="liveLamp" aria-hidden="true"></span>
+            <span id="liveStatusText">Standby</span>
+          </div>
+          <p class="connection-readout" id="connectionReadout" aria-live="polite">
+            Awaiting mutually exclusive instructions.
+          </p>
+        </div>
+      </header>
+
+      <nav class="screen-nav" aria-label="Universe Splitter views">
+        <button class="screen-nav__button is-active" data-screen-target="splitter" type="button">
+          Splitter
+        </button>
+        <button class="screen-nav__button" data-screen-target="chart" type="button">
+          Chart
+        </button>
+        <button class="screen-nav__button" data-screen-target="stats" type="button">
+          Stats
+        </button>
+        <button class="screen-nav__button" data-screen-target="manual" type="button">
+          Manual
+        </button>
+      </nav>
+
+      <main class="screen-frame">
+        <section class="screen-panel is-active" data-screen-panel="splitter">
+          <div class="splitter-layout">
+            <section class="panel input-bay">
+              <div class="panel-heading">
+                <p class="panel-heading__tag">Input Chamber</p>
+                <h2>Decision Pair</h2>
+              </div>
+
+              <form id="splitterForm" class="splitter-form">
+                <label class="input-label" for="optionA">
+                  <span>In one universe, I will now</span>
+                  <textarea
+                    id="optionA"
+                    name="optionA"
+                    rows="3"
+                    maxlength="180"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="walk to the corner shop"
+                    required
+                  ></textarea>
+                </label>
+
+                <label class="input-label" for="optionB">
+                  <span>In the other universe, I will now</span>
+                  <textarea
+                    id="optionB"
+                    name="optionB"
+                    rows="3"
+                    maxlength="180"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="stay right here"
+                    required
+                  ></textarea>
+                </label>
+
+                <p class="validation-message" id="validationMessage" aria-live="polite">
+                  Enter two distinct actions and await the bifurcation sequence.
+                </p>
+
+                <div class="control-row">
+                  <button class="atom-button" id="splitButton" type="submit">
+                    <span class="atom-button__icon" aria-hidden="true">
+                      <svg viewBox="0 0 160 120" role="presentation">
+                        <ellipse cx="80" cy="60" rx="56" ry="22"></ellipse>
+                        <ellipse cx="80" cy="60" rx="56" ry="22" transform="rotate(60 80 60)"></ellipse>
+                        <ellipse cx="80" cy="60" rx="56" ry="22" transform="rotate(-60 80 60)"></ellipse>
+                        <circle cx="80" cy="60" r="10"></circle>
+                      </svg>
+                    </span>
+                    <span class="atom-button__label">Split Universe</span>
+                  </button>
+
+                  <button class="secondary-button" id="nevermindButton" type="button">
+                    Nevermind
+                  </button>
+                </div>
+              </form>
+
+              <div class="settings-strip" aria-label="Machine settings">
+                <label class="toggle">
+                  <input id="soundToggle" type="checkbox" />
+                  <span>Sound</span>
+                </label>
+                <label class="toggle">
+                  <input id="flashToggle" type="checkbox" />
+                  <span>Flash</span>
+                </label>
+                <label class="toggle">
+                  <input id="shakeToggle" type="checkbox" />
+                  <span>Shake</span>
+                </label>
+              </div>
+            </section>
+
+            <section class="telemetry-column">
+              <section class="panel progress-panel">
+                <div class="panel-heading">
+                  <p class="panel-heading__tag">Split Progress</p>
+                  <h2>Machine Status</h2>
+                </div>
+
+                <ol class="stage-list" id="stageList">
+                  <li class="stage-list__item" data-stage-key="valid">
+                    <span class="stage-lamp" aria-hidden="true"></span>
+                    <span class="stage-label">Input valid</span>
+                  </li>
+                  <li class="stage-list__item" data-stage-key="internet">
+                    <span class="stage-lamp" aria-hidden="true"></span>
+                    <span class="stage-label">Internet contacted</span>
+                  </li>
+                  <li class="stage-list__item" data-stage-key="geneva">
+                    <span class="stage-lamp" aria-hidden="true"></span>
+                    <span class="stage-label">Geneva online</span>
+                  </li>
+                  <li class="stage-list__item" data-stage-key="ready">
+                    <span class="stage-lamp" aria-hidden="true"></span>
+                    <span class="stage-label">Device ready</span>
+                  </li>
+                  <li class="stage-list__item" data-stage-key="photon">
+                    <span class="stage-lamp" aria-hidden="true"></span>
+                    <span class="stage-label">Photon emitted</span>
+                  </li>
+                  <li class="stage-list__item" data-stage-key="event">
+                    <span class="stage-lamp" aria-hidden="true"></span>
+                    <span class="stage-label">Quantum event</span>
+                  </li>
+                </ol>
+
+                <div class="diagnostics-console" id="diagnosticsConsole" aria-live="polite">
+                  <p class="diagnostics-console__line">Diagnostics idle.</p>
+                </div>
+              </section>
+
+              <section class="panel result-panel">
+                <div class="panel-heading">
+                  <p class="panel-heading__tag">Current Universe</p>
+                  <h2>Instruction</h2>
+                </div>
+
+                <div class="result-copy" id="resultPanel" aria-live="polite">
+                  <p class="result-copy__primary" id="resultPrimary">
+                    Your universe is stable. No split has been recorded yet.
+                  </p>
+                  <p class="result-copy__secondary" id="resultSecondary">
+                    When you initiate a bifurcation, this panel will report your branch.
+                  </p>
+                </div>
+
+                <div class="result-actions">
+                  <button class="secondary-button" id="shareButton" type="button">
+                    Tell The World
+                  </button>
+                  <button class="secondary-button" id="resetButton" type="button">
+                    Reset
+                  </button>
+                </div>
+              </section>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen-panel" data-screen-panel="chart">
+          <div class="chart-layout">
+            <section class="panel chart-panel">
+              <div class="panel-heading">
+                <p class="panel-heading__tag">Branching History</p>
+                <h2>Universe Chart</h2>
+              </div>
+
+              <div class="timeline-frame" id="timelineFrame">
+                <svg id="timelineSvg" viewBox="0 0 560 320" role="img" aria-label="Branching timeline"></svg>
+              </div>
+            </section>
+
+            <section class="panel branch-log-panel">
+              <div class="panel-heading">
+                <p class="panel-heading__tag">Recorded Splits</p>
+                <h2>Branch Log</h2>
+              </div>
+              <div class="branch-log" id="branchLog"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen-panel" data-screen-panel="stats">
+          <div class="stats-layout">
+            <section class="panel stats-panel">
+              <div class="panel-heading">
+                <p class="panel-heading__tag">Multiverse Statistics</p>
+                <h2>Instrument Readings</h2>
+              </div>
+
+              <div class="stat-grid">
+                <article class="stat-card">
+                  <h3>Splits Recorded</h3>
+                  <p id="splitsCount">0</p>
+                </article>
+                <article class="stat-card">
+                  <h3>Estimated Universes</h3>
+                  <p id="universesCount">1</p>
+                </article>
+                <article class="stat-card">
+                  <h3>Branch A Frequency</h3>
+                  <p id="branchABias">0%</p>
+                </article>
+                <article class="stat-card">
+                  <h3>Branch B Frequency</h3>
+                  <p id="branchBBias">0%</p>
+                </article>
+              </div>
+
+              <div class="bias-bar" aria-hidden="true">
+                <span class="bias-bar__segment bias-bar__segment--a" id="biasBarA"></span>
+                <span class="bias-bar__segment bias-bar__segment--b" id="biasBarB"></span>
+              </div>
+
+              <dl class="stats-notes" id="statsNotes">
+                <div>
+                  <dt>First split</dt>
+                  <dd>None recorded</dd>
+                </div>
+                <div>
+                  <dt>Last split</dt>
+                  <dd>None recorded</dd>
+                </div>
+                <div>
+                  <dt>Last source</dt>
+                  <dd>Awaiting contact</dd>
+                </div>
+                <div>
+                  <dt>Diagnostics</dt>
+                  <dd>Machine in standby.</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen-panel" data-screen-panel="manual">
+          <div class="manual-layout">
+            <section class="panel manual-panel">
+              <div class="panel-heading">
+                <p class="panel-heading__tag">Operating Manual</p>
+                <h2>Field Instructions</h2>
+              </div>
+
+              <ol class="manual-steps">
+                <li>
+                  Enter two mutually exclusive actions into the input chamber. The machine can only resolve
+                  one binary divergence at a time.
+                </li>
+                <li>
+                  Press <strong>Split Universe</strong> and wait while the Geneva device emits a photon and
+                  registers the quantum event.
+                </li>
+                <li>
+                  When your branch is reported, do exactly what appears on screen. The point is not to decide
+                  beforehand; the point is to learn which universe you occupy.
+                </li>
+              </ol>
+
+              <div class="manual-notes">
+                <p>
+                  Universe Splitter is a theatrical decision machine. It does not tell you what would be best.
+                  It tells you which side of a split you are standing in after the event has occurred.
+                </p>
+                <p>
+                  If contact with Geneva fails, the split is considered incomplete. Retry the sequence or
+                  abandon the attempt with <strong>Nevermind</strong>.
+                </p>
+                <p>
+                  Every successful bifurcation is stored locally on this terminal and contributes to the chart
+                  and multiverse statistics readouts.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop is-hidden" id="modalBackdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <p class="modal__eyebrow" id="modalEyebrow">Warning</p>
+        <h2 class="modal__title" id="modalTitle">Modal Title</h2>
+        <p class="modal__message" id="modalMessage"></p>
+        <div class="modal__actions" id="modalActions"></div>
+      </div>
+    </div>
+
+    <template id="branchLogTemplate">
+      <article class="branch-log__entry">
+        <p class="branch-log__timestamp"></p>
+        <p class="branch-log__selected"></p>
+        <p class="branch-log__rejected"></p>
+      </article>
+    </template>
+
+    <script src="script.js"></script>
+  </body>
+</html>
