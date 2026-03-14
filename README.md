@@ -1,5 +1,7 @@
 # Universe Splitter 2.0
 
+Live at: https://abhisach687.github.io/U2MV/
+
 A futuristic, framework-free reinterpretation of `Universe Splitter` built as a static web app. It is designed to feel like a dramatic decision console first, then open into a point-and-click adventure layer after your first resolved branch.
 
 ## User Story: How To Navigate The App
