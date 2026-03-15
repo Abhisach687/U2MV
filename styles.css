@@ -718,6 +718,26 @@ body {
   gap: var(--space-3);
 }
 
+.tutorial-shell {
+  position: relative;
+}
+
+.tutorial-shell[data-tutorial-state="active"] {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 216, 77, 0.08),
+    0 12px 28px rgba(255, 191, 47, 0.12);
+}
+
+.tutorial-shell[data-tutorial-state="paused"] {
+  background: linear-gradient(135deg, rgba(97, 166, 255, 0.12), rgba(255, 79, 162, 0.1));
+  border-color: rgba(97, 166, 255, 0.22);
+}
+
+.tutorial-shell[data-tutorial-state="complete"] {
+  background: linear-gradient(135deg, rgba(64, 204, 168, 0.16), rgba(97, 166, 255, 0.12));
+  border-color: rgba(64, 204, 168, 0.24);
+}
+
 .walkthrough-card__top {
   display: flex;
   justify-content: space-between;
@@ -749,6 +769,41 @@ body {
   margin: 0 0 0.85rem;
   color: var(--ink);
   line-height: 1.55;
+}
+
+.tutorial-progress {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.tutorial-step {
+  min-height: 0.48rem;
+  border-radius: 999px;
+  background: rgba(12, 20, 46, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tutorial-step.is-complete {
+  background: rgba(64, 204, 168, 0.86);
+  border-color: rgba(64, 204, 168, 0.32);
+}
+
+.tutorial-step.is-current {
+  background: rgba(255, 216, 77, 0.92);
+  border-color: rgba(255, 216, 77, 0.38);
+  box-shadow: 0 0 12px rgba(255, 216, 77, 0.18);
+}
+
+.tutorial-shell__note {
+  min-height: 2.7rem;
+}
+
+.tutorial-shell__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
 }
 
 .quickstart-list {
@@ -788,6 +843,141 @@ body {
   color: var(--muted);
   line-height: 1.55;
   font-family: var(--mono-font);
+}
+
+.prediction-panel {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-4);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(52, 125, 255, 0.16), transparent 58%),
+    linear-gradient(180deg, rgba(14, 22, 54, 0.98), rgba(10, 16, 39, 0.96));
+  border: 1px solid rgba(97, 166, 255, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 28px rgba(3, 8, 24, 0.2);
+}
+
+.prediction-panel[data-prediction="B"] {
+  background:
+    linear-gradient(135deg, rgba(255, 79, 162, 0.14), transparent 58%),
+    linear-gradient(180deg, rgba(14, 22, 54, 0.98), rgba(10, 16, 39, 0.96));
+  border-color: rgba(255, 79, 162, 0.18);
+}
+
+.prediction-panel[data-prediction="even"] {
+  background:
+    linear-gradient(135deg, rgba(255, 216, 77, 0.14), transparent 58%),
+    linear-gradient(180deg, rgba(14, 22, 54, 0.98), rgba(10, 16, 39, 0.96));
+  border-color: rgba(255, 216, 77, 0.18);
+}
+
+.prediction-panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.prediction-panel__eyebrow,
+.prediction-panel__meta {
+  margin: 0;
+}
+
+.prediction-panel__eyebrow {
+  font-family: var(--heading-font);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cyan-strong);
+}
+
+.prediction-panel[data-prediction="B"] .prediction-panel__eyebrow {
+  color: var(--pink-soft);
+}
+
+.prediction-panel[data-prediction="even"] .prediction-panel__eyebrow {
+  color: var(--warning);
+}
+
+.prediction-panel__badge {
+  padding: 0.38rem 0.74rem;
+  border-radius: 999px;
+  border: 1px solid rgba(97, 166, 255, 0.18);
+  background: rgba(14, 22, 56, 0.9);
+  color: var(--cyan-strong);
+  font: 700 0.76rem/1 var(--mono-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.prediction-panel[data-prediction="B"] .prediction-panel__badge {
+  border-color: rgba(255, 79, 162, 0.2);
+  color: var(--pink-soft);
+}
+
+.prediction-panel[data-prediction="even"] .prediction-panel__badge {
+  border-color: rgba(255, 216, 77, 0.24);
+  color: var(--warning);
+}
+
+.prediction-panel__layers {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.prediction-layer {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(10, 18, 44, 0.44);
+  border: 1px solid rgba(97, 166, 255, 0.12);
+}
+
+.prediction-layer--confirmed {
+  border-color: rgba(255, 216, 77, 0.18);
+}
+
+.prediction-layer--guess {
+  border-color: rgba(97, 166, 255, 0.14);
+}
+
+.prediction-layer--pattern {
+  border-color: rgba(255, 79, 162, 0.14);
+}
+
+.prediction-layer__eyebrow,
+.prediction-layer__value,
+.prediction-layer__meta {
+  margin: 0;
+}
+
+.prediction-layer__eyebrow {
+  font: 600 0.72rem/1.2 var(--mono-font);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.prediction-layer__value {
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.prediction-layer__meta {
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.86rem;
+}
+
+.prediction-panel__meta {
+  color: var(--warning);
+  line-height: 1.45;
+  font-family: var(--mono-font);
+  font-size: 0.82rem;
 }
 
 .splitter-form {
@@ -1314,6 +1504,203 @@ textarea:focus-visible,
   background: linear-gradient(90deg, rgba(52, 125, 255, 0.92), rgba(97, 166, 255, 0.98));
 }
 
+.estimator-section {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(97, 166, 255, 0.12);
+}
+
+.estimator-section__heading h3,
+.estimator-card h3 {
+  margin: 0;
+}
+
+.estimator-section__intro {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.estimator-grid {
+  display: grid;
+  gap: 0.95rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.estimator-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 18px;
+  background: rgba(16, 24, 56, 0.78);
+  border: 1px solid rgba(97, 166, 255, 0.08);
+}
+
+.estimator-card--weighted {
+  grid-column: 1 / -1;
+  margin-bottom: var(--space-3);
+  background:
+    linear-gradient(135deg, rgba(255, 216, 77, 0.12), transparent 48%),
+    rgba(16, 24, 56, 0.82);
+  border-color: rgba(255, 216, 77, 0.16);
+}
+
+.estimator-card__eyebrow,
+.estimator-card__lead,
+.estimator-card__note,
+.estimator-chart__caption {
+  margin: 0;
+}
+
+.estimator-card__eyebrow {
+  color: var(--cyan-strong);
+  font-family: var(--mono-font);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.estimator-card--weighted .estimator-card__eyebrow {
+  color: var(--warning);
+}
+
+.estimator-card__lead {
+  line-height: 1.55;
+}
+
+.estimator-card__lead strong {
+  font-family: var(--heading-font);
+  letter-spacing: 0.04em;
+}
+
+.estimator-card__note,
+.estimator-chart__caption {
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.estimator-card__stats {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.estimator-card__stats div {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.75rem 0.8rem;
+  border-radius: 14px;
+  background: rgba(10, 18, 44, 0.92);
+  border: 1px solid rgba(97, 166, 255, 0.08);
+}
+
+.estimator-card__stats dt,
+.estimator-card__stats dd {
+  margin: 0;
+}
+
+.estimator-card__stats dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-family: var(--mono-font);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.estimator-card__stats dd {
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.probability-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.probability-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.probability-row__label,
+.probability-row__value {
+  font-family: var(--mono-font);
+  font-size: 0.84rem;
+}
+
+.probability-row__label {
+  color: var(--muted);
+}
+
+.probability-row__value {
+  color: var(--ink);
+}
+
+.probability-row__track {
+  height: 0.62rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(8, 14, 36, 0.96);
+  border: 1px solid rgba(97, 166, 255, 0.08);
+}
+
+.probability-row__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+}
+
+.probability-row__fill--a {
+  background: linear-gradient(90deg, rgba(52, 125, 255, 0.98), rgba(97, 166, 255, 0.82));
+}
+
+.probability-row__fill--b {
+  background: linear-gradient(90deg, rgba(255, 79, 162, 0.98), rgba(255, 118, 185, 0.82));
+}
+
+.estimator-chart {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.estimator-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  padding: 0.35rem;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(4, 13, 22, 0.94), rgba(3, 8, 14, 0.98));
+  border: 1px solid rgba(97, 166, 255, 0.08);
+}
+
+.estimator-chart__axis {
+  stroke: rgba(145, 185, 204, 0.28);
+  stroke-width: 1;
+}
+
+.estimator-chart__area {
+  fill: rgba(255, 216, 77, 0.18);
+}
+
+.estimator-chart__line {
+  fill: none;
+  stroke: rgba(255, 216, 77, 0.94);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.estimator-chart__label {
+  fill: rgba(196, 202, 231, 0.86);
+  font: 600 11px/1 var(--mono-font);
+}
+
 .stats-notes {
   margin: 0;
   display: grid;
@@ -1362,6 +1749,19 @@ textarea:focus-visible,
 .settings-stack {
   display: grid;
   gap: var(--space-4);
+}
+
+.settings-actions,
+.manual-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.settings-actions__note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.92rem;
 }
 
 .toggle {
@@ -1522,7 +1922,31 @@ textarea:focus-visible,
   box-shadow:
     0 0 0 2px rgba(255, 216, 77, 0.78),
     0 0 18px rgba(255, 216, 77, 0.28) !important;
+  opacity: 1 !important;
+  filter: none !important;
   animation: guide-pulse 1.2s ease-in-out infinite;
+}
+
+.app-shell[data-tutorial-mode="active"] .bridge-scene,
+.app-shell[data-tutorial-mode="active"] .hotspot-card,
+.app-shell[data-tutorial-mode="active"] .mission-panel,
+.app-shell[data-tutorial-mode="active"] .stage-panel,
+.app-shell[data-tutorial-mode="active"] .prediction-panel,
+.app-shell[data-tutorial-mode="active"] .ritual-banner {
+  opacity: 0.78;
+  filter: saturate(0.92);
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.app-shell[data-tutorial-mode="active"] .split-panel,
+.app-shell[data-tutorial-mode="active"] .result-panel,
+.app-shell[data-tutorial-mode="active"] .tutorial-shell,
+.app-shell[data-tutorial-mode="active"] .validation-message,
+.app-shell[data-tutorial-mode="active"] .split-button,
+.app-shell[data-tutorial-mode="active"] .input-label,
+.app-shell[data-tutorial-mode="active"] .control-row {
+  opacity: 1;
+  filter: none;
 }
 
 .modal__title {
@@ -1734,6 +2158,16 @@ textarea:focus-visible,
   .walkthrough-card__top {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tutorial-shell {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 5;
+  }
+
+  .tutorial-progress {
+    gap: 0.35rem;
   }
 
   .status-actions {

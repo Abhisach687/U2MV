@@ -135,10 +135,10 @@
                   <h2>Split Console</h2>
                 </div>
 
-                <div class="quickstart-card walkthrough-card" id="walkthroughCard" aria-label="Arrival walkthrough">
+                <div class="quickstart-card walkthrough-card tutorial-shell" id="walkthroughCard" aria-label="Arrival walkthrough">
                   <div class="walkthrough-card__top">
                     <div>
-                      <p class="eyebrow" id="walkthroughEyebrow">You Arrive At The Bridge</p>
+                      <p class="eyebrow" id="walkthroughEyebrow">Tutorial Mode</p>
                       <p class="quickstart-card__title" id="walkthroughTitle">The first minute is simple.</p>
                     </div>
                     <span class="walkthrough-status" id="walkthroughStatus">Step 1 of 7</span>
@@ -146,16 +146,63 @@
                   <p class="quickstart-card__lead" id="walkthroughLead">
                     Sound starts off by default. You only need the two text boxes and Split Universe to get your first answer.
                   </p>
-                  <ol class="quickstart-list walkthrough-list" id="walkthroughSteps"></ol>
-                  <p class="walkthrough-footnote" id="walkthroughFootnote">
+                  <div class="tutorial-progress" id="tutorialProgress" aria-hidden="true"></div>
+                  <p class="walkthrough-footnote tutorial-shell__note" id="walkthroughFootnote">
                     Use Guide Me whenever you want the app to point at the exact next control.
                   </p>
+                  <div class="tutorial-shell__actions">
+                    <button class="secondary-button" id="tutorialPrimaryButton" type="button">
+                      Guide Me
+                    </button>
+                    <button class="ghost-button" id="tutorialSecondaryButton" type="button">
+                      Skip Tutorial
+                    </button>
+                  </div>
                 </div>
 
                 <p class="split-panel__helper" id="splitHelper">
                   Hotspots, missions, and lore are optional. They add atmosphere and progression, but they
                   never influence which branch is selected.
                 </p>
+
+                <article class="prediction-panel" id="choicePrediction" aria-live="polite" data-prediction="A">
+                  <div class="prediction-panel__top">
+                    <p class="prediction-panel__eyebrow">Statistical Estimate</p>
+                    <span class="prediction-panel__badge" id="choicePredictionBadge">Prior only</span>
+                  </div>
+                  <div class="prediction-panel__layers">
+                    <section class="prediction-layer prediction-layer--confirmed">
+                      <p class="prediction-layer__eyebrow">Confirmed current universe</p>
+                      <p class="prediction-layer__value" id="choicePredictionConfirmed">
+                        No confirmed branch yet.
+                      </p>
+                      <p class="prediction-layer__meta" id="choicePredictionConfirmedMeta">
+                        After you confirm a branch, the latest explicit confirmation appears here.
+                      </p>
+                    </section>
+                    <section class="prediction-layer prediction-layer--guess">
+                      <p class="prediction-layer__eyebrow">Model guess now</p>
+                      <p class="prediction-layer__value" id="choicePredictionGuess">
+                        No confirmed pattern yet.
+                      </p>
+                      <p class="prediction-layer__meta" id="choicePredictionGuessMeta">
+                        The model only uses confirmed history, not the raw relay assignment.
+                      </p>
+                    </section>
+                    <section class="prediction-layer prediction-layer--pattern">
+                      <p class="prediction-layer__eyebrow">Behavior pattern</p>
+                      <p class="prediction-layer__value" id="choicePredictionPattern">
+                        Quiet teaser only.
+                      </p>
+                      <p class="prediction-layer__meta" id="choicePredictionPatternMeta">
+                        Recent drift appears after five confirmed choices.
+                      </p>
+                    </section>
+                  </div>
+                  <p class="prediction-panel__meta" id="choicePredictionMeta">
+                    Based on confirmed history only. Relay assignment remains random.
+                  </p>
+                </article>
 
                 <form id="splitterForm" class="splitter-form">
                   <label class="input-label" for="optionA">
@@ -393,6 +440,17 @@
                 <span class="bias-bar__segment bias-bar__segment--b" id="biasBarB"></span>
               </div>
 
+              <section class="estimator-section" aria-labelledby="estimatorTitle">
+                <div class="estimator-section__heading">
+                  <p class="panel-heading__tag">Current Universe Estimate</p>
+                  <h3 id="estimatorTitle">Frequentist And Bayesian Synthesis</h3>
+                </div>
+                <p class="estimator-section__intro">
+                  Uses confirmed branch choices only. Unconfirmed relay assignments are ignored here.
+                </p>
+                <div class="estimator-grid" id="estimatorGrid"></div>
+              </section>
+
               <dl class="stats-notes" id="statsNotes"></dl>
             </section>
 
@@ -450,6 +508,15 @@
                     This controls the app's music mix. Your phone or PC volume still controls the final loudness.
                   </small>
                 </label>
+
+                <div class="settings-actions">
+                  <button class="ghost-button" id="settingsRestartTutorialButton" type="button">
+                    Restart Tutorial
+                  </button>
+                  <p class="settings-actions__note">
+                    Reopens the guided first-use route without resetting your archive.
+                  </p>
+                </div>
               </div>
             </section>
           </div>
@@ -469,6 +536,11 @@
                   enrich the atmosphere, but the core split remains immediate when you need an answer.
                 </p>
                 <ol class="manual-steps" id="manualMissionSteps"></ol>
+                <div class="manual-actions">
+                  <button class="secondary-button" id="manualRestartTutorialButton" type="button">
+                    Restart Tutorial
+                  </button>
+                </div>
               </div>
             </section>
 

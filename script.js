@@ -9,6 +9,14 @@
   const STATUS_TIMEOUT_MS = 1400;
   const LOCAL_SAVE_DELAY_MS = 140;
   const SESSION_SAVE_DELAY_MS = 80;
+  const ESTIMATOR_PRIOR_ALPHA = 1;
+  const ESTIMATOR_PRIOR_BETA = 1;
+  const ESTIMATOR_CONFIDENCE_Z = 1.96;
+  const ESTIMATOR_DENSITY_SAMPLES = 64;
+  const ESTIMATOR_TIE_EPSILON = 0.001;
+  const ESTIMATOR_RECENT_WINDOW = 5;
+  const ESTIMATOR_BASELINE_WEIGHT = 0.65;
+  const ESTIMATOR_RECENT_WEIGHT = 0.35;
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
   const params = new URLSearchParams(window.location.search);
@@ -468,13 +476,25 @@
     goArchiveButton: document.getElementById("goArchiveButton"),
     ritualBanner: document.getElementById("ritualBanner"),
     ritualTrail: document.getElementById("ritualTrail"),
+    walkthroughCard: document.getElementById("walkthroughCard"),
     walkthroughEyebrow: document.getElementById("walkthroughEyebrow"),
     walkthroughTitle: document.getElementById("walkthroughTitle"),
     walkthroughStatus: document.getElementById("walkthroughStatus"),
     walkthroughLead: document.getElementById("walkthroughLead"),
-    walkthroughSteps: document.getElementById("walkthroughSteps"),
+    tutorialProgress: document.getElementById("tutorialProgress"),
     walkthroughFootnote: document.getElementById("walkthroughFootnote"),
+    tutorialPrimaryButton: document.getElementById("tutorialPrimaryButton"),
+    tutorialSecondaryButton: document.getElementById("tutorialSecondaryButton"),
     splitHelper: document.getElementById("splitHelper"),
+    choicePrediction: document.getElementById("choicePrediction"),
+    choicePredictionBadge: document.getElementById("choicePredictionBadge"),
+    choicePredictionConfirmed: document.getElementById("choicePredictionConfirmed"),
+    choicePredictionConfirmedMeta: document.getElementById("choicePredictionConfirmedMeta"),
+    choicePredictionGuess: document.getElementById("choicePredictionGuess"),
+    choicePredictionGuessMeta: document.getElementById("choicePredictionGuessMeta"),
+    choicePredictionPattern: document.getElementById("choicePredictionPattern"),
+    choicePredictionPatternMeta: document.getElementById("choicePredictionPatternMeta"),
+    choicePredictionMeta: document.getElementById("choicePredictionMeta"),
     form: document.getElementById("splitterForm"),
     optionA: document.getElementById("optionA"),
     optionB: document.getElementById("optionB"),
@@ -513,6 +533,7 @@
     loreCount: document.getElementById("loreCount"),
     biasBarA: document.getElementById("biasBarA"),
     biasBarB: document.getElementById("biasBarB"),
+    estimatorGrid: document.getElementById("estimatorGrid"),
     statsNotes: document.getElementById("statsNotes"),
     masteryRing: document.getElementById("masteryRing"),
     masteryRingValue: document.getElementById("masteryRingValue"),
@@ -523,6 +544,8 @@
     achievementGrid: document.getElementById("achievementGrid"),
     artifactGrid: document.getElementById("artifactGrid"),
     manualLoreNotes: document.getElementById("manualLoreNotes"),
+    manualRestartTutorialButton: document.getElementById("manualRestartTutorialButton"),
+    settingsRestartTutorialButton: document.getElementById("settingsRestartTutorialButton"),
     guideCallout: document.getElementById("guideCallout"),
     guideCalloutEyebrow: document.getElementById("guideCalloutEyebrow"),
     guideCalloutTitle: document.getElementById("guideCalloutTitle"),
@@ -1487,6 +1510,9 @@
         lastMessage: "Awaiting mutually exclusive instructions.",
         contentSource: "fallback",
       },
+      tutorial: {
+        dismissed: false,
+      },
       profile: {
         xp: 0,
         visitedScreens: ["bridge"],
@@ -1516,6 +1542,8 @@
       ritualReady: false,
       splitRun: null,
       onboardingDismissed: false,
+      tutorialActive: true,
+      tutorialStepId: "option-a",
       walkthroughActive: true,
       walkthroughStepId: "option-a",
       highlightTarget: null,
@@ -1558,6 +1586,9 @@
         lastMessage: savedLocal.diagnostics?.lastMessage || state.local.diagnostics.lastMessage,
         contentSource: savedLocal.diagnostics?.contentSource || state.local.diagnostics.contentSource,
       };
+      state.local.tutorial = {
+        dismissed: typeof savedLocal.tutorial?.dismissed === "boolean" ? savedLocal.tutorial.dismissed : false,
+      };
       state.local.profile = sanitizeProfile(savedLocal.profile);
     }
 
@@ -1568,6 +1599,18 @@
       state.session.ritualReady = Boolean(savedSession.ritualReady);
       state.session.splitRun = savedSession.splitRun || null;
       state.session.onboardingDismissed = Boolean(savedSession.onboardingDismissed);
+      state.session.tutorialActive =
+        typeof savedSession.tutorialActive === "boolean"
+          ? savedSession.tutorialActive
+          : typeof savedSession.walkthroughActive === "boolean"
+            ? savedSession.walkthroughActive
+            : true;
+      state.session.tutorialStepId =
+        typeof savedSession.tutorialStepId === "string"
+          ? savedSession.tutorialStepId
+          : typeof savedSession.walkthroughStepId === "string"
+            ? savedSession.walkthroughStepId
+            : "option-a";
       state.session.walkthroughActive =
         typeof savedSession.walkthroughActive === "boolean" ? savedSession.walkthroughActive : true;
       state.session.walkthroughStepId =
@@ -1689,6 +1732,14 @@
       getAudioEngine().uiTap();
       handleContinueMission();
     });
+    elements.tutorialPrimaryButton.addEventListener("click", () => {
+      getAudioEngine().uiTap();
+      handleTutorialPrimaryAction();
+    });
+    elements.tutorialSecondaryButton.addEventListener("click", () => {
+      getAudioEngine().uiTap();
+      handleTutorialSecondaryAction();
+    });
     elements.briefingButton.addEventListener("click", () => {
       getAudioEngine().uiTap();
       showBriefingModal();
@@ -1696,6 +1747,14 @@
     elements.openManualButton.addEventListener("click", () => {
       getAudioEngine().uiTap();
       setActiveScreen("manual");
+    });
+    elements.manualRestartTutorialButton.addEventListener("click", () => {
+      getAudioEngine().uiTap();
+      restartTutorialMode("manual");
+    });
+    elements.settingsRestartTutorialButton.addEventListener("click", () => {
+      getAudioEngine().uiTap();
+      restartTutorialMode("settings");
     });
     elements.goArchiveButton.addEventListener("click", () => {
       getAudioEngine().uiTap();
@@ -1753,15 +1812,98 @@
       optional: false,
     }));
     const currentStepState = stepStates.find((stepState) => !stepState.complete) || null;
+    const available = Boolean(currentStepState);
+    const dismissed = Boolean(state.local.tutorial?.dismissed);
+    const active = available && state.session.tutorialActive !== false && !dismissed;
 
     return {
-      active: Boolean(currentStepState),
+      available,
+      active,
+      paused: available && !active,
+      complete: !available,
+      dismissed,
       optionalSoundComplete,
       stepStates,
       currentStepState,
       currentStep: currentStepState ? currentStepState.step : null,
       currentIndex: currentStepState ? currentStepState.index : stepStates.length,
     };
+  }
+
+  function openTutorialSummaryCallout() {
+    const target = elements.optionA;
+    if (!target) {
+      return;
+    }
+
+    focusGuideTarget(target);
+    showGuideCallout(target, {
+      source: "tutorial-summary",
+      targetKey: "optionA",
+      title: "Fast route through the Bridge",
+      body: "Type two actions, split once, confirm what you actually did, then use History and Profile when you want the wider picture.",
+      eyebrow: "Tutorial",
+    });
+  }
+
+  function resumeTutorialMode(options = {}) {
+    state.local.tutorial.dismissed = false;
+    state.session.tutorialActive = true;
+    if (options.resetAutoShown) {
+      state.session.guideAutoShown = false;
+    }
+    persistLocal();
+    persistSession();
+    render();
+
+    if (!options.guide) {
+      return;
+    }
+
+    const tutorial = getWalkthroughState();
+    if (tutorial.currentStep) {
+      guideToWalkthroughStep(tutorial.currentStep, Boolean(options.auto));
+      return;
+    }
+
+    openTutorialSummaryCallout();
+  }
+
+  function pauseTutorialMode() {
+    state.local.tutorial.dismissed = true;
+    state.session.tutorialActive = false;
+    hideGuideCallout();
+    persistLocal();
+    persistSession();
+    render();
+  }
+
+  function restartTutorialMode(source = "manual") {
+    state.local.diagnostics.lastMessage = `Tutorial mode reopened from ${source}.`;
+    if (state.local.activeScreen !== "bridge") {
+      setActiveScreen("bridge");
+    }
+    resumeTutorialMode({ guide: true, auto: true, resetAutoShown: true });
+  }
+
+  function handleTutorialPrimaryAction() {
+    const tutorial = getWalkthroughState();
+    if (tutorial.complete) {
+      restartTutorialMode("tutorial shell");
+      return;
+    }
+
+    resumeTutorialMode({ guide: true });
+  }
+
+  function handleTutorialSecondaryAction() {
+    const tutorial = getWalkthroughState();
+    if (tutorial.complete) {
+      restartTutorialMode("tutorial shell");
+      return;
+    }
+
+    pauseTutorialMode();
   }
 
   function getNavButtonForScreen(screen) {
@@ -1835,7 +1977,7 @@
     const walkthrough = getWalkthroughState();
     if (
       state.session.guideSource === "walkthrough" &&
-      (!walkthrough.currentStep || walkthrough.currentStep.target !== state.session.highlightTarget)
+      (!walkthrough.active || !walkthrough.currentStep || walkthrough.currentStep.target !== state.session.highlightTarget)
     ) {
       hideGuideCallout();
       return;
@@ -1899,23 +2041,16 @@
     }
   }
 
-  function renderWalkthroughList(listElement, walkthrough) {
-    listElement.replaceChildren();
+  function renderTutorialProgress(tutorial) {
+    elements.tutorialProgress.replaceChildren();
 
-    const optionalSound = document.createElement("li");
-    optionalSound.classList.add("is-optional");
-    optionalSound.classList.toggle("is-complete", walkthrough.optionalSoundComplete);
-    optionalSound.textContent = walkthrough.optionalSoundComplete
-      ? "Optional: sound is on."
-      : "Optional: sound is off by default. Turn it on only if you want ambience.";
-    listElement.appendChild(optionalSound);
-
-    walkthrough.stepStates.forEach((stepState) => {
-      const item = document.createElement("li");
-      item.classList.toggle("is-complete", stepState.complete);
-      item.classList.toggle("is-current", walkthrough.currentStepState?.step.id === stepState.step.id);
-      item.textContent = stepState.step.label;
-      listElement.appendChild(item);
+    tutorial.stepStates.forEach((stepState) => {
+      const step = document.createElement("span");
+      step.className = "tutorial-step";
+      step.classList.toggle("is-complete", stepState.complete);
+      step.classList.toggle("is-current", tutorial.currentStepState?.step.id === stepState.step.id);
+      step.title = stepState.step.title;
+      elements.tutorialProgress.appendChild(step);
     });
   }
 
@@ -1931,59 +2066,104 @@
     });
 
     elements.navHint.textContent = preSplit
-      ? "Stay on Split for your first answer. History, Profile, and Guide are visible now so you can see where the journey goes next."
+      ? walkthrough.active
+        ? "Tutorial mode is guiding the fast split loop. Stay with Split first; the other screens stay visible so the route ahead feels clear."
+        : walkthrough.paused
+          ? "Tutorial mode is paused. Split stays fastest; use Guide Me or Resume Tutorial if you want the route back."
+          : "Stay on Split for your first answer. History, Profile, and Guide are visible now so you can see where the journey goes next."
       : walkthrough.active
-        ? "Your first answer is complete. Follow the next stops to learn History, Profile, and the deeper adventure layer."
-        : "The whole terminal is open now. Split fast when you want an answer, or roam for missions, lore, and progression.";
+        ? "Tutorial mode is still guiding the next stops. Split, confirm, then let Guide Me point you to History, Profile, and the first discovery layer."
+        : walkthrough.paused
+          ? "Tutorial mode is paused. Split freely, or resume the guided route when you want the exact next stop."
+          : "The whole terminal is open now. Split fast when you want an answer, or roam for missions, lore, and progression.";
   }
 
   function renderWalkthrough(walkthrough) {
-    renderWalkthroughList(elements.walkthroughSteps, walkthrough);
+    renderTutorialProgress(walkthrough);
+    elements.walkthroughCard.dataset.tutorialState = walkthrough.active
+      ? "active"
+      : walkthrough.paused
+        ? "paused"
+        : "complete";
 
     if (walkthrough.active) {
       const firstSplitComplete = state.local.history.length > 0;
       const currentStep = walkthrough.currentStep;
-      elements.walkthroughEyebrow.textContent = firstSplitComplete ? "Bridge Tour" : "You Arrive At The Bridge";
-      elements.walkthroughTitle.textContent = firstSplitComplete
-        ? "Your first split worked. Learn the rest of the terminal."
-        : "The first minute is simple.";
+      elements.walkthroughEyebrow.textContent = "Tutorial Mode";
+      elements.walkthroughTitle.textContent = currentStep ? currentStep.title : "The first minute is simple.";
       elements.walkthroughStatus.textContent = `Step ${walkthrough.currentIndex + 1} of ${walkthrough.stepStates.length}`;
-      elements.walkthroughLead.textContent = firstSplitComplete
-        ? "You already have an answer. Now follow the guided route through History, Profile, and the first exploration step."
-        : "Sound starts off by default. You only need the two text boxes and Split Universe to get your first answer.";
-      elements.walkthroughFootnote.textContent = currentStep
-        ? `${currentStep.title}. Use Guide Me whenever you want the app to point at the exact next control.`
-        : "Use Guide Me whenever you want the app to point at the exact next control.";
+      elements.walkthroughLead.textContent = currentStep
+        ? currentStep.guideCopy
+        : firstSplitComplete
+          ? "Your first split worked. Stay with the guided route long enough to learn the rest of the terminal."
+          : "You only need the two text boxes, Split Universe, and Current Universe to finish the first loop.";
+      elements.walkthroughFootnote.textContent = firstSplitComplete
+        ? "Guide Me will jump to the exact next control. The rest of the Bridge stays visible, but this shell is leading the route."
+        : "Guide Me will jump to the exact next control. Optional systems stay visible, but they are not needed for your first answer.";
+      elements.tutorialPrimaryButton.textContent = "Guide Me";
+      elements.tutorialPrimaryButton.title = "Jump to the exact next tutorial control.";
+      elements.tutorialSecondaryButton.hidden = false;
+      elements.tutorialSecondaryButton.textContent = "Skip Tutorial";
+      elements.tutorialSecondaryButton.title = "Pause tutorial mode and keep the whole terminal open.";
       elements.splitHelper.textContent = firstSplitComplete
-        ? "The fast loop is still simple: split for an answer, then roam through History, Profile, and the discovery deck when you want more."
-        : "For the fastest first run, ignore the glowing instruments and finish your first split. Nothing optional can bias the result.";
+        ? "The fast loop is still simple: split for an answer, confirm what you actually did, then roam through History, Profile, and discovery when you want more."
+        : "For the cleanest first run, ignore the glowing instruments and finish one split. Nothing optional can bias the result.";
       return;
     }
 
-    elements.walkthroughEyebrow.textContent = "Adventure Layer Online";
-    elements.walkthroughTitle.textContent = "The Bridge now responds to curiosity.";
-    elements.walkthroughStatus.textContent = "Walkthrough Complete";
+    if (walkthrough.paused) {
+      elements.walkthroughEyebrow.textContent = "Tutorial Paused";
+      elements.walkthroughTitle.textContent = walkthrough.currentStep
+        ? walkthrough.currentStep.title
+        : "The guided route is ready when you are.";
+      elements.walkthroughStatus.textContent = `Paused at step ${walkthrough.currentIndex + 1} of ${walkthrough.stepStates.length}`;
+      elements.walkthroughLead.textContent =
+        "The whole terminal stays open while tutorial mode is paused. Resume it when you want the next exact step, or keep exploring at your own pace.";
+      elements.walkthroughFootnote.textContent =
+        "Guide Me and the restart buttons in Guide and Settings can bring the first-use route back without resetting your archive.";
+      elements.tutorialPrimaryButton.textContent = "Resume Tutorial";
+      elements.tutorialPrimaryButton.title = "Resume tutorial mode and highlight the next required control.";
+      elements.tutorialSecondaryButton.hidden = true;
+      elements.splitHelper.textContent =
+        "Split stays the main path. Optional discovery, rituals, and statistics remain available whenever you want them.";
+      return;
+    }
+
+    elements.walkthroughEyebrow.textContent = "Bridge Ready";
+    elements.walkthroughTitle.textContent = "Tutorial complete.";
+    elements.walkthroughStatus.textContent = `${walkthrough.stepStates.length} of ${walkthrough.stepStates.length}`;
     elements.walkthroughLead.textContent =
-      "You know the fast split loop now. Keep using Split for quick answers, or lean into missions, hotspots, artifacts, and lore.";
+      "The fast loop is yours now: type two actions, split once, confirm what you actually did, then use the wider Bridge when you want more depth.";
     elements.walkthroughFootnote.textContent =
-      "Guide Me now points toward the next meaningful mission or exploration step instead of the basic controls.";
+      "Guide Me now points toward missions and exploration. Restart Tutorial from Guide or Settings any time you want the first-use route again.";
+    elements.tutorialPrimaryButton.textContent = "Restart Tutorial";
+    elements.tutorialPrimaryButton.title = "Reopen the tutorial route on the Bridge.";
+    elements.tutorialSecondaryButton.hidden = true;
     elements.splitHelper.textContent =
       "Hotspots, missions, and lore are optional. They deepen the atmosphere and progression, but they never influence which branch is selected.";
   }
 
   function renderGuidedProgress(walkthrough) {
-    elements.continueMissionButton.textContent = "Guide Me";
+    elements.continueMissionButton.textContent = walkthrough.available
+      ? walkthrough.active
+        ? "Guide Me"
+        : "Resume Tutorial"
+      : "Guide Me";
     elements.continueMissionButton.disabled = false;
-    elements.continueMissionButton.title = walkthrough.active
-      ? "Highlight the exact next walkthrough step."
+    elements.continueMissionButton.title = walkthrough.available
+      ? walkthrough.active
+        ? "Highlight the exact next tutorial step."
+        : "Resume tutorial mode and highlight the next tutorial step."
       : "Highlight the next mission or exploration step.";
-    elements.bridgeMissionBanner.classList.toggle("is-onboarding", walkthrough.active);
+    elements.bridgeMissionBanner.classList.toggle("is-onboarding", walkthrough.available);
 
-    if (walkthrough.active) {
-      elements.missionEyebrow.textContent = "Arrival Walkthrough";
+    if (walkthrough.available) {
+      elements.missionEyebrow.textContent = walkthrough.active ? "Tutorial Context" : "Tutorial Paused";
       elements.missionTitle.textContent = walkthrough.currentStep?.title || "The Bridge is ready.";
       elements.missionSummary.textContent =
-        "This is the guided route for your first minutes. The deeper game systems stay visible, but you only need the highlighted next step.";
+        walkthrough.active
+          ? "The tutorial shell on Split is leading the route. This panel only mirrors the remaining stops so you can see what comes next."
+          : "Tutorial mode is paused. Resume it from Split or with Guide Me when you want the exact next stop back on screen.";
       renderMissionStepsList(
         elements.missionSteps,
         walkthrough.stepStates.map((stepState) => ({
@@ -2182,6 +2362,9 @@
   function render() {
     syncBranchMetricsFromHistory();
     const walkthrough = getWalkthroughState();
+    elements.appShell.dataset.tutorialMode = walkthrough.active ? "active" : walkthrough.paused ? "paused" : "complete";
+    state.session.tutorialActive = walkthrough.active;
+    state.session.tutorialStepId = walkthrough.currentStep?.id || null;
     state.session.walkthroughActive = walkthrough.active;
     state.session.walkthroughStepId = walkthrough.currentStep?.id || null;
 
@@ -2205,6 +2388,7 @@
     renderHotspots();
     renderHotspotCard();
     renderRitual();
+    renderChoicePrediction();
     renderLatestResult();
 
     if (state.local.activeScreen === "archive") {
@@ -2388,9 +2572,9 @@
   function renderLatestResult() {
     const latest = getLatestSplit();
     if (!latest) {
-      elements.resultPrimary.textContent = "Your universe is stable. No split has been recorded yet.";
+      elements.resultPrimary.textContent = "No relay result yet.";
       elements.resultSecondary.textContent =
-        "When you initiate a bifurcation, this panel will report the relay assignment and let you confirm what you actually did.";
+        "Type two actions, run one split, and this panel will show the relay assignment plus the place where you confirm what actually happened.";
       elements.resultConfirm.hidden = true;
       elements.shareButton.disabled = true;
       return;
@@ -2399,6 +2583,27 @@
     elements.shareButton.disabled = false;
     setResultCopy(latest);
     renderResultConfirmation(latest);
+  }
+
+  function renderChoicePrediction() {
+    const prediction = buildChoicePrediction(buildCurrentUniverseEstimator(state.local.history, state.local.draft));
+    elements.choicePrediction.dataset.prediction = prediction.key;
+    elements.choicePredictionBadge.textContent = prediction.badge;
+    elements.choicePredictionConfirmed.textContent = prediction.confirmed.value;
+    elements.choicePredictionConfirmedMeta.textContent = prediction.confirmed.meta;
+    elements.choicePredictionGuess.textContent = prediction.guess.value;
+    elements.choicePredictionGuessMeta.textContent = prediction.guess.meta;
+    elements.choicePredictionPattern.textContent = prediction.pattern.value;
+    elements.choicePredictionPatternMeta.textContent = prediction.pattern.meta;
+    elements.choicePredictionMeta.textContent = prediction.meta;
+  }
+
+  function renderEstimatorDiagnostics(estimator) {
+    elements.estimatorGrid.replaceChildren(
+      buildFrequentistEstimatorCard(estimator),
+      buildBayesianEstimatorCard(estimator),
+      buildWeightedEstimatorCard(estimator)
+    );
   }
 
   function renderResultConfirmation(record) {
@@ -2415,7 +2620,7 @@
 
     elements.resultConfirm.hidden = false;
     elements.resultConfirmLead.textContent =
-      "The relay can assign a branch, but only you know what you actually did. Confirm it below so History and Profile stay accurate.";
+      "The relay can assign a branch, but only you know what you actually did. Confirm it below so History, Profile, and the prediction layer all stay grounded in reality.";
     elements.confirmSelectedButton.textContent = `I did: ${truncateLabel(assignedText, 42)}`;
     elements.confirmOtherButton.textContent = `I did: ${truncateLabel(otherText, 42)}`;
     elements.confirmSelectedButton.classList.toggle("is-active", observedKey === assignedKey);
@@ -2591,12 +2796,13 @@
     const metrics = profile.metrics;
     const levelInfo = getLevelInfo(profile.xp);
     const title = getOperatorTitle(levelInfo.level);
+    const estimator = buildCurrentUniverseEstimator(state.local.history, state.local.draft);
     const nextLevelText = levelInfo.nextLevelAt ? `${levelInfo.currentLevelXp} / ${levelInfo.nextLevelAt} XP` : "Max signal";
     const totalSplits = state.local.history.length;
     const universes = 2n ** BigInt(totalSplits);
-    const totalBranches = Math.max(1, metrics.branchA + metrics.branchB);
-    const ratioA = (metrics.branchA / totalBranches) * 100;
-    const ratioB = (metrics.branchB / totalBranches) * 100;
+    const totalConfirmed = estimator.confirmed.total;
+    const ratioA = totalConfirmed ? (estimator.confirmed.countA / totalConfirmed) * 100 : 50;
+    const ratioB = totalConfirmed ? (estimator.confirmed.countB / totalConfirmed) * 100 : 50;
 
     elements.masteryTitle.textContent = title;
     elements.masterySummary.textContent =
@@ -2614,6 +2820,23 @@
     [
       ["Current title", title],
       ["Artifacts unlocked", `${profile.artifacts.length} / ${Object.keys(ARTIFACT_CATALOG).length}`],
+      ["Confirmed sample", `${totalConfirmed} of ${totalSplits} recorded splits`],
+      [
+        "Current likely now",
+        estimator.currentLikely.leadingKey
+          ? `${estimator.labels[estimator.currentLikely.leadingKey].short} ${formatProbability(
+              estimator.currentLikely.leadingKey === "A" ? estimator.currentLikely.pA : estimator.currentLikely.pB
+            )}`
+          : "Too close to call",
+      ],
+      [
+        "Recent drift",
+        estimator.recent.available
+          ? estimator.recent.leadingKey
+            ? `${estimator.labels[estimator.recent.leadingKey].short} from the last ${estimator.recent.sampleSize}`
+            : `Balanced across the last ${estimator.recent.sampleSize}`
+          : `Available after ${ESTIMATOR_RECENT_WINDOW} confirmations`,
+      ],
       ["Last branch", getLatestSplit() ? formatDateTime(getLatestSplit().createdAt) : "No branches yet"],
       [
         "Signal source",
@@ -2630,6 +2853,7 @@
       elements.statsNotes.append(dt, dd);
     });
 
+    renderEstimatorDiagnostics(estimator);
     renderAchievements();
     renderArtifacts();
   }
@@ -2698,7 +2922,7 @@
     const mission = getActiveMission();
     renderMissionStepsList(
       elements.manualMissionSteps,
-      walkthrough.active
+      walkthrough.available
         ? walkthrough.stepStates.map((stepState) => ({
             label: stepState.step.label,
             complete: stepState.complete,
@@ -2714,8 +2938,10 @@
     const loreIds = state.local.profile.discoveredLore.slice(-3);
     if (!loreIds.length) {
       const paragraph = document.createElement("p");
-      paragraph.textContent = walkthrough.active
-        ? "You arrive at the Bridge on the Split page. Enter two different actions, press Split Universe, read Current Universe, then use History and Profile to understand the wider terminal."
+      paragraph.textContent = walkthrough.available
+        ? walkthrough.active
+          ? "Tutorial mode leads from Split. This screen is the calmer reference version of the same route, while Guide Me handles the exact next control."
+          : "Tutorial mode is paused. Resume it or restart it when you want the first-use route back on screen."
         : "The Bridge reveals itself slowly. The more you inspect, split, and review the Archive, the more the relay's hidden history comes into focus.";
       elements.manualLoreNotes.appendChild(paragraph);
       return;
@@ -2754,8 +2980,8 @@
     elements.goArchiveButton.title = latest
       ? "Open History to review previous branches."
       : "You can open History now, but it becomes useful after your first split.";
-    elements.openManualButton.title = walkthrough.active
-      ? "Open Guide for a fuller explanation of the app."
+    elements.openManualButton.title = walkthrough.available
+      ? "Open Guide for the calmer reference version of the tutorial route."
       : "Open Guide for controls, lore, and progression help.";
   }
 
@@ -2794,6 +3020,7 @@
     state.local.draft.optionA = elements.optionA.value;
     state.local.draft.optionB = elements.optionB.value;
     persistLocal();
+    renderChoicePrediction();
     updateControls();
     const walkthrough = getWalkthroughState();
     renderWalkthrough(walkthrough);
@@ -3042,12 +3269,22 @@
       state.local.settings = imported.settings;
       state.local.history = imported.history;
       state.local.diagnostics = imported.diagnostics;
+      state.local.tutorial = {
+        dismissed:
+          imported.history.length > 0 ||
+          imported.profile.visitedScreens.includes("archive") ||
+          imported.profile.visitedScreens.includes("diagnostics"),
+      };
       state.local.profile = imported.profile;
       getAudioEngine().setMusicVolume(state.local.settings.musicVolume);
       getAudioEngine().syncAudioState();
       state.local.profile.metrics.imports += 1;
       state.local.diagnostics.lastMessage = "Archive imported successfully.";
+      state.session.tutorialActive = !state.local.tutorial.dismissed;
+      state.session.tutorialStepId = "option-a";
+      state.session.guideAutoShown = false;
       state.session.walkthroughResultSeen = state.local.history.length > 0;
+      hideGuideCallout(false);
       persistLocal();
       persistSession();
       render();
@@ -3188,8 +3425,8 @@
 
   function handleContinueMission() {
     const walkthrough = getWalkthroughState();
-    if (walkthrough.active) {
-      guideToWalkthroughStep(walkthrough.currentStep);
+    if (walkthrough.available) {
+      resumeTutorialMode({ guide: true });
       return;
     }
 
@@ -3228,19 +3465,21 @@
       : "All guided missions complete. Continue exploring at your own pace.";
 
     showModal({
-      eyebrow: walkthrough.active ? "Arrival Briefing" : "Mission Briefing",
-      title: walkthrough.active ? "Your first route through the Bridge" : mission ? mission.title : "Bridge Status",
-      message: walkthrough.active
-        ? "Stay on Split first. Enter two different actions, resolve your first branch, then use History and Profile before diving into the discovery deck."
+      eyebrow: walkthrough.available ? "Tutorial Briefing" : "Mission Briefing",
+      title: walkthrough.available ? "Your first route through the Bridge" : mission ? mission.title : "Bridge Status",
+      message: walkthrough.available
+        ? walkthrough.active
+          ? "Stay with Split first. Type two different actions, resolve one branch, confirm what you actually did, then let Guide Me walk you through History, Profile, and the discovery deck."
+          : "Tutorial mode is paused. Resume it when you want the exact next step, or keep using the terminal freely."
         : mission
           ? `${mission.summary} ${stepSummary}`
           : stepSummary,
       actions: [
         {
-          label: walkthrough.active ? "Guide Me" : "Continue Mission",
+          label: walkthrough.available ? (walkthrough.active ? "Guide Me" : "Resume Tutorial") : "Continue Mission",
           action: () => {
             closeModal();
-            handleContinueMission();
+            walkthrough.available ? resumeTutorialMode({ guide: true }) : handleContinueMission();
           },
           variant: "secondary",
         },
@@ -3455,15 +3694,668 @@
     if (!hasObservedBranch(record)) {
       elements.resultPrimary.textContent = `Relay assignment: ${assignedText}.`;
       elements.resultSecondary.textContent =
-        "Only you know what actually happened. Confirm below if you followed this branch, or correct it if you took the other option.";
+        "This panel reports the relay result first. Confirm what you actually did below so the archive can separate the relay from reality.";
       return;
     }
 
     elements.resultPrimary.textContent = `Current branch confirmed: ${currentText}.`;
     elements.resultSecondary.textContent =
       currentKey === assignedKey
-        ? `The relay originally assigned the same branch. Other universe: ${otherText}.`
-        : `The relay originally assigned ${assignedText}. Other universe: ${otherText}.`;
+        ? `The relay assigned the same branch. The prediction card above still interprets the broader pattern separately. Other universe: ${otherText}.`
+        : `The relay originally assigned ${assignedText}, but your confirmation now anchors reality here. Other universe: ${otherText}.`;
+  }
+
+  function buildChoicePrediction(estimator) {
+    const confirmedTotal = estimator.confirmed.total;
+    const currentSelection = estimator.currentSelection;
+    const guessKey = estimator.currentLikely.leadingKey;
+    const guessProbability = guessKey
+      ? formatProbability(guessKey === "A" ? estimator.currentLikely.pA : estimator.currentLikely.pB)
+      : "";
+    const disagreement = Boolean(currentSelection && guessKey && currentSelection.key !== guessKey);
+
+    return {
+      key: currentSelection?.key || guessKey || estimator.weighted.leadingKey || "even",
+      badge: !confirmedTotal
+        ? "Quiet teaser"
+        : disagreement
+          ? "Confirmed vs model"
+          : currentSelection
+            ? "Confirmed + model"
+            : `${confirmedTotal} confirmed`,
+      confirmed: {
+        value: currentSelection ? currentSelection.headline : "No confirmed current universe yet.",
+        meta: currentSelection
+          ? "This is the latest explicit confirmation in your archive."
+          : "Confirm a branch after the relay runs to anchor this layer in reality.",
+      },
+      guess: {
+        value: !confirmedTotal
+          ? "No confirmed pattern yet."
+          : guessKey
+            ? `${estimator.labels[guessKey].headline} | ${guessProbability}`
+            : "Too close to call.",
+        meta: !confirmedTotal
+          ? "The model stays quiet until confirmed choices exist."
+          : estimator.currentLikely.mode === "baseline-plus-recent"
+            ? `Current likely branch blends the long-view synthesis with recent drift from the last ${estimator.recent.sampleSize} confirmations.`
+            : `Current likely branch is using the long-view synthesis across ${confirmedTotal} confirmed ${pluralize(confirmedTotal, "choice")}.`,
+      },
+      pattern: {
+        value: estimator.pattern.headline,
+        meta: estimator.pattern.meta,
+      },
+      meta: !confirmedTotal
+        ? "Relay assignment stays random. This card only interprets confirmed behavior."
+        : disagreement
+          ? `Confirmed reality is ${currentSelection.shortLabel}. The broader model still leans ${estimator.labels[guessKey].short}.`
+          : currentSelection
+            ? "Confirmed reality stays separate from the model's broader pattern context."
+            : "Model interpretation only. Confirm what you actually did so the archive can separate truth from trend.",
+    };
+  }
+
+  function buildFrequentistEstimatorCard(estimator) {
+    const article = createEstimatorCard("Frequentist", "Bernoulli PMF");
+    const lead = document.createElement("p");
+    lead.className = "estimator-card__lead";
+    lead.textContent = estimator.frequentist.available
+      ? "Confirmed branch frequencies converted into a Bernoulli PMF over Option A and Option B."
+      : "No confirmed observations yet, so the frequentist point estimate is unavailable.";
+
+    article.append(
+      lead,
+      createEstimatorStatsList([
+        ["Point estimate p(A)", estimator.frequentist.available ? formatProportion(estimator.frequentist.pA) : "Unavailable"],
+        [
+          "Wilson 95% CI",
+          estimator.frequentist.available
+            ? `${formatProbability(estimator.frequentist.interval.lower)} to ${formatProbability(estimator.frequentist.interval.upper)}`
+            : "Unavailable",
+        ],
+        ["Confirmed sample", `${estimator.confirmed.total} ${pluralize(estimator.confirmed.total, "branch")}`],
+      ])
+    );
+
+    if (estimator.frequentist.available) {
+      article.append(
+        createProbabilityStack([
+          { label: "Option A", value: estimator.frequentist.pA, tone: "a" },
+          { label: "Option B", value: estimator.frequentist.pB, tone: "b" },
+        ])
+      );
+    }
+
+    const note = document.createElement("p");
+    note.className = "estimator-card__note";
+    note.textContent = estimator.frequentist.available
+      ? "Wilson interval shows the 95% confidence range for P(A)."
+      : "Confirm at least one branch to activate the frequentist PMF.";
+    article.append(note);
+    return article;
+  }
+
+  function buildBayesianEstimatorCard(estimator) {
+    const article = createEstimatorCard("Bayesian", "Beta Posterior PDF");
+    const lead = document.createElement("p");
+    lead.className = "estimator-card__lead";
+    lead.textContent = "Posterior over the latent preference p = P(A), updated from a neutral Beta(1,1) prior.";
+
+    article.append(
+      lead,
+      createEstimatorStatsList([
+        ["Prior", `Beta(${estimator.bayesian.priorAlpha}, ${estimator.bayesian.priorBeta})`],
+        ["Posterior", `Beta(${estimator.bayesian.alpha}, ${estimator.bayesian.beta})`],
+        ["Posterior mean", formatProportion(estimator.bayesian.mean)],
+        ["Posterior variance", formatDecimal(estimator.bayesian.variance, 4)],
+      ]),
+      createDensityChart(estimator.bayesian.densitySamples)
+    );
+
+    const note = document.createElement("p");
+    note.className = "estimator-card__note";
+    note.textContent = "The density begins flat at cold start and tightens as confirmed choices accumulate.";
+    article.append(note);
+    return article;
+  }
+
+  function buildWeightedEstimatorCard(estimator) {
+    const article = createEstimatorCard("Current Universe Estimate", "Layered Interpretation", "estimator-card--weighted");
+    const lead = document.createElement("p");
+    const currentSelection = estimator.currentSelection;
+    const leadingKey = estimator.currentLikely.leadingKey;
+    const strong = document.createElement("strong");
+    const longViewKey = estimator.weighted.leadingKey;
+    lead.className = "estimator-card__lead";
+    lead.append("Model guess now: ");
+    strong.textContent = leadingKey ? estimator.labels[leadingKey].headline : "Too close to call";
+    lead.append(strong);
+    lead.append(".");
+
+    article.append(
+      lead,
+      createEstimatorStatsList([
+        [
+          "Long-view synthesis",
+          longViewKey
+            ? `${estimator.labels[longViewKey].short} ${formatProbability(longViewKey === "A" ? estimator.weighted.pA : estimator.weighted.pB)}`
+            : "Balanced baseline",
+        ],
+        [
+          "Recent drift",
+          estimator.recent.available
+            ? estimator.recent.leadingKey
+              ? `${estimator.labels[estimator.recent.leadingKey].short} ${formatProbability(
+                  estimator.recent.leadingKey === "A" ? estimator.recent.pA : estimator.recent.pB
+                )} from the last ${estimator.recent.sampleSize}`
+              : `Balanced across the last ${estimator.recent.sampleSize}`
+            : `Available after ${ESTIMATOR_RECENT_WINDOW} confirmed choices`,
+        ],
+        [
+          "Current likely now",
+          leadingKey
+            ? `${estimator.labels[leadingKey].short} ${formatProbability(
+                leadingKey === "A" ? estimator.currentLikely.pA : estimator.currentLikely.pB
+              )}`
+            : "Too close to call",
+        ],
+        ["Latest explicit confirmation", currentSelection ? currentSelection.headline : "Awaiting confirmation"],
+      ]),
+      createProbabilityStack([
+        { label: estimator.labels.A.short, value: estimator.currentLikely.pA, tone: "a" },
+        { label: estimator.labels.B.short, value: estimator.currentLikely.pB, tone: "b" },
+      ])
+    );
+
+    const note = document.createElement("p");
+    note.className = "estimator-card__note";
+    note.textContent = !estimator.confirmed.total
+      ? "The layered view stays quiet until at least one confirmed branch exists."
+      : currentSelection && leadingKey && currentSelection.key !== leadingKey
+        ? "Confirmed reality wins. The disagreement here is interesting context, not a correction."
+        : "Current likely branch blends long-view synthesis with recent drift once five confirmed choices exist.";
+    article.append(note);
+    return article;
+  }
+
+  function createEstimatorCard(title, eyebrow, extraClass = "") {
+    const article = document.createElement("article");
+    article.className = extraClass ? `estimator-card ${extraClass}` : "estimator-card";
+
+    const eyebrowLine = document.createElement("p");
+    eyebrowLine.className = "estimator-card__eyebrow";
+    eyebrowLine.textContent = eyebrow;
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+
+    article.append(eyebrowLine, heading);
+    return article;
+  }
+
+  function createEstimatorStatsList(entries) {
+    const list = document.createElement("dl");
+    list.className = "estimator-card__stats";
+
+    entries.forEach(([label, value]) => {
+      const wrapper = document.createElement("div");
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      wrapper.append(dt, dd);
+      list.appendChild(wrapper);
+    });
+
+    return list;
+  }
+
+  function createProbabilityStack(rows) {
+    const stack = document.createElement("div");
+    stack.className = "probability-stack";
+    rows.forEach((row) => {
+      stack.appendChild(createProbabilityRow(row.label, row.value, row.tone));
+    });
+    return stack;
+  }
+
+  function createProbabilityRow(label, value, tone) {
+    const row = document.createElement("div");
+    row.className = "probability-row";
+
+    const labelElement = document.createElement("span");
+    labelElement.className = "probability-row__label";
+    labelElement.textContent = label;
+
+    const track = document.createElement("span");
+    track.className = "probability-row__track";
+
+    const fill = document.createElement("span");
+    fill.className = `probability-row__fill probability-row__fill--${tone}`;
+    fill.style.width = `${Math.max(0, Math.min(100, (Number(value) || 0) * 100))}%`;
+    track.appendChild(fill);
+
+    const valueElement = document.createElement("span");
+    valueElement.className = "probability-row__value";
+    valueElement.textContent = formatProbability(value);
+
+    row.append(labelElement, track, valueElement);
+    return row;
+  }
+
+  function createDensityChart(samples) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "estimator-chart";
+
+    const svg = buildDensityChartSvg(samples);
+    const caption = document.createElement("p");
+    caption.className = "estimator-chart__caption";
+    caption.textContent = "Beta PDF over the latent probability P(A).";
+
+    wrapper.append(svg, caption);
+    return wrapper;
+  }
+
+  function buildDensityChartSvg(samples) {
+    const svgNs = "http://www.w3.org/2000/svg";
+    const width = 240;
+    const height = 120;
+    const left = 18;
+    const right = 18;
+    const top = 12;
+    const bottom = 18;
+    const baselineY = height - bottom;
+    const innerWidth = width - left - right;
+    const innerHeight = baselineY - top;
+    const maxDensity = Math.max(1, ...samples.map((sample) => sample.density));
+    const toX = (x) => left + x * innerWidth;
+    const toY = (density) => baselineY - (density / maxDensity) * innerHeight;
+    const points = samples.map((sample) => ({
+      x: toX(sample.x),
+      y: toY(sample.density),
+    }));
+
+    const svg = document.createElementNS(svgNs, "svg");
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("class", "estimator-chart__svg");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Beta posterior density for the probability of choosing Option A.");
+
+    const axis = document.createElementNS(svgNs, "line");
+    axis.setAttribute("class", "estimator-chart__axis");
+    axis.setAttribute("x1", String(left));
+    axis.setAttribute("y1", String(baselineY));
+    axis.setAttribute("x2", String(width - right));
+    axis.setAttribute("y2", String(baselineY));
+
+    const area = document.createElementNS(svgNs, "path");
+    area.setAttribute("class", "estimator-chart__area");
+    area.setAttribute(
+      "d",
+      `M ${points[0].x.toFixed(2)} ${baselineY} ${points
+        .map((point) => `L ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+        .join(" ")} L ${points[points.length - 1].x.toFixed(2)} ${baselineY} Z`
+    );
+
+    const line = document.createElementNS(svgNs, "path");
+    line.setAttribute("class", "estimator-chart__line");
+    line.setAttribute(
+      "d",
+      points
+        .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+        .join(" ")
+    );
+
+    const leftLabel = document.createElementNS(svgNs, "text");
+    leftLabel.setAttribute("class", "estimator-chart__label");
+    leftLabel.setAttribute("x", String(left));
+    leftLabel.setAttribute("y", String(height - 4));
+    leftLabel.textContent = "0";
+
+    const rightLabel = document.createElementNS(svgNs, "text");
+    rightLabel.setAttribute("class", "estimator-chart__label");
+    rightLabel.setAttribute("x", String(width - right - 6));
+    rightLabel.setAttribute("y", String(height - 4));
+    rightLabel.textContent = "1";
+
+    svg.append(axis, area, line, leftLabel, rightLabel);
+    return svg;
+  }
+
+  function buildCurrentUniverseEstimator(history, draft) {
+    const labels = buildDraftBranchLabels(draft?.optionA, draft?.optionB);
+    const confirmedHistory = getConfirmedHistory(history);
+    const confirmed = countObservedBranches(confirmedHistory);
+    const frequentist = buildFrequentistEstimate(confirmed.countA, confirmed.total);
+    const bayesian = buildBayesianEstimate(confirmed.countA, confirmed.total);
+    const weighted = buildWeightedSynthesis(frequentist, bayesian, confirmed.total);
+    const recent = buildRecentEstimate(confirmedHistory);
+    const currentLikely = buildCurrentLikelyEstimate(weighted, recent, confirmed.total);
+    const latestConfirmedRecord = getLatestConfirmedRecord(history);
+    const latestObservedKey = getObservedBranchKey(latestConfirmedRecord);
+    const latestObservedText = latestObservedKey ? getBranchText(latestConfirmedRecord, latestObservedKey) : "";
+    const currentSelection =
+      latestObservedKey && latestConfirmedRecord
+        ? {
+            key: latestObservedKey,
+            shortLabel: labels[latestObservedKey].short,
+            text: latestObservedText,
+            headline: latestObservedText
+              ? `Option ${latestObservedKey}, "${truncateLabel(latestObservedText, 48)}"`
+              : `Option ${latestObservedKey}`,
+          }
+        : null;
+    const pattern = buildBehaviorPatternSummary({
+      confirmed,
+      weighted,
+      recent,
+      currentLikely,
+      labels,
+    });
+
+    return {
+      recordedTotal: Array.isArray(history) ? history.length : 0,
+      confirmed,
+      frequentist,
+      bayesian,
+      weighted,
+      recent,
+      currentLikely,
+      currentSelection,
+      pattern,
+      labels,
+    };
+  }
+
+  function getLatestConfirmedRecord(history) {
+    if (!Array.isArray(history)) {
+      return null;
+    }
+
+    for (let index = history.length - 1; index >= 0; index -= 1) {
+      if (getObservedBranchKey(history[index])) {
+        return history[index];
+      }
+    }
+
+    return null;
+  }
+
+  function getConfirmedHistory(history) {
+    if (!Array.isArray(history)) {
+      return [];
+    }
+
+    return history.filter((record) => Boolean(getObservedBranchKey(record)));
+  }
+
+  function countObservedBranches(history) {
+    return history.reduce(
+      (counts, record) => {
+        if (getObservedBranchKey(record) === "B") {
+          counts.countB += 1;
+        } else {
+          counts.countA += 1;
+        }
+        counts.total += 1;
+        return counts;
+      },
+      { total: 0, countA: 0, countB: 0 }
+    );
+  }
+
+  function buildRecentEstimate(confirmedHistory) {
+    const recentHistory = confirmedHistory.slice(-ESTIMATOR_RECENT_WINDOW);
+    const counts = countObservedBranches(recentHistory);
+    const total = counts.total;
+    const pA = total ? counts.countA / total : 0.5;
+
+    return {
+      available: total >= ESTIMATOR_RECENT_WINDOW,
+      sampleSize: total,
+      countA: counts.countA,
+      countB: counts.countB,
+      pA,
+      pB: 1 - pA,
+      leadingKey: total >= ESTIMATOR_RECENT_WINDOW ? getLeadingBranchKey(pA, 1 - pA) : null,
+    };
+  }
+
+  function buildCurrentLikelyEstimate(weighted, recent, total) {
+    if (!total) {
+      return {
+        mode: "quiet",
+        pA: weighted.pA,
+        pB: weighted.pB,
+        leadingKey: weighted.leadingKey,
+      };
+    }
+
+    if (!recent.available) {
+      return {
+        mode: "long-view-only",
+        pA: weighted.pA,
+        pB: weighted.pB,
+        leadingKey: weighted.leadingKey,
+      };
+    }
+
+    const pA = ESTIMATOR_BASELINE_WEIGHT * weighted.pA + ESTIMATOR_RECENT_WEIGHT * recent.pA;
+    return {
+      mode: "baseline-plus-recent",
+      pA,
+      pB: 1 - pA,
+      leadingKey: getLeadingBranchKey(pA, 1 - pA),
+    };
+  }
+
+  function buildBehaviorPatternSummary({ confirmed, weighted, recent, currentLikely, labels }) {
+    if (!confirmed.total) {
+      return {
+        headline: "No confirmed pattern yet.",
+        meta: "The prediction surface stays quiet until you confirm a real branch.",
+      };
+    }
+
+    if (confirmed.total < 3) {
+      return {
+        headline: "Too little confirmed history.",
+        meta: `${confirmed.total} confirmed ${pluralize(confirmed.total, "choice")} logged so far.`,
+      };
+    }
+
+    if (recent.available && recent.leadingKey && weighted.leadingKey && recent.leadingKey !== weighted.leadingKey) {
+      return {
+        headline: `Recent drift: ${labels[recent.leadingKey].short}.`,
+        meta: `Long-run lean still favors ${labels[weighted.leadingKey].short}.`,
+      };
+    }
+
+    if (recent.available && recent.leadingKey) {
+      return {
+        headline: `Recently leaning ${labels[recent.leadingKey].short}.`,
+        meta: weighted.leadingKey
+          ? `Long-run lean: ${labels[weighted.leadingKey].short}.`
+          : "Long-run history is still balanced.",
+      };
+    }
+
+    if (currentLikely.leadingKey) {
+      return {
+        headline: `Long-run lean: ${labels[currentLikely.leadingKey].short}.`,
+        meta: `Recent drift activates after ${ESTIMATOR_RECENT_WINDOW} confirmed choices.`,
+      };
+    }
+
+    return {
+      headline: "Balanced so far.",
+      meta: "Confirmed history is still too balanced to call.",
+    };
+  }
+
+  function buildFrequentistEstimate(countA, total) {
+    if (!total) {
+      return {
+        available: false,
+        pA: 0.5,
+        pB: 0.5,
+        interval: { lower: 0, upper: 1 },
+      };
+    }
+
+    const pA = countA / total;
+    return {
+      available: true,
+      pA,
+      pB: 1 - pA,
+      interval: computeWilsonInterval(countA, total),
+    };
+  }
+
+  function computeWilsonInterval(successes, trials, z = ESTIMATOR_CONFIDENCE_Z) {
+    if (!trials) {
+      return { lower: 0, upper: 1 };
+    }
+
+    const zSquared = z * z;
+    const proportion = successes / trials;
+    const denominator = 1 + zSquared / trials;
+    const center = (proportion + zSquared / (2 * trials)) / denominator;
+    const margin = (z * Math.sqrt((proportion * (1 - proportion) + zSquared / (4 * trials)) / trials)) / denominator;
+
+    return {
+      lower: Math.max(0, center - margin),
+      upper: Math.min(1, center + margin),
+    };
+  }
+
+  function buildBayesianEstimate(countA, total) {
+    const alpha = ESTIMATOR_PRIOR_ALPHA + countA;
+    const beta = ESTIMATOR_PRIOR_BETA + total - countA;
+    const mean = alpha / (alpha + beta);
+    const variance = (alpha * beta) / (((alpha + beta) ** 2) * (alpha + beta + 1));
+
+    return {
+      priorAlpha: ESTIMATOR_PRIOR_ALPHA,
+      priorBeta: ESTIMATOR_PRIOR_BETA,
+      alpha,
+      beta,
+      mean,
+      variance,
+      densitySamples: sampleBetaPdf(alpha, beta, ESTIMATOR_DENSITY_SAMPLES),
+    };
+  }
+
+  function buildWeightedSynthesis(frequentist, bayesian, total) {
+    if (!total || !frequentist.available) {
+      return {
+        mode: "prior-only",
+        pA: bayesian.mean,
+        pB: 1 - bayesian.mean,
+        weightFrequentist: 0,
+        weightBayesian: 1,
+        leadingKey: getLeadingBranchKey(bayesian.mean, 1 - bayesian.mean),
+      };
+    }
+
+    const uncertaintyFrequentist = Math.max(frequentist.interval.upper - frequentist.interval.lower, 1e-6);
+    const uncertaintyBayesian = Math.max(3.92 * Math.sqrt(bayesian.variance), 1e-6);
+    const frequentistWeightRaw = 1 / (uncertaintyFrequentist * uncertaintyFrequentist);
+    const bayesianWeightRaw = 1 / (uncertaintyBayesian * uncertaintyBayesian);
+    const totalWeight = frequentistWeightRaw + bayesianWeightRaw;
+    const weightFrequentist = frequentistWeightRaw / totalWeight;
+    const weightBayesian = bayesianWeightRaw / totalWeight;
+    const pA = weightFrequentist * frequentist.pA + weightBayesian * bayesian.mean;
+
+    return {
+      mode: "weighted",
+      pA,
+      pB: 1 - pA,
+      weightFrequentist,
+      weightBayesian,
+      leadingKey: getLeadingBranchKey(pA, 1 - pA),
+    };
+  }
+
+  function buildDraftBranchLabels(optionA, optionB) {
+    const textA = String(optionA || "").trim();
+    const textB = String(optionB || "").trim();
+    const includeText = Boolean(textA && textB);
+
+    return {
+      A: {
+        short: "Option A",
+        headline: includeText ? `Option A, "${truncateLabel(textA, 48)}"` : "Option A",
+      },
+      B: {
+        short: "Option B",
+        headline: includeText ? `Option B, "${truncateLabel(textB, 48)}"` : "Option B",
+      },
+    };
+  }
+
+  function getLeadingBranchKey(probabilityA, probabilityB) {
+    if (Math.abs(probabilityA - probabilityB) < ESTIMATOR_TIE_EPSILON) {
+      return null;
+    }
+    return probabilityB > probabilityA ? "B" : "A";
+  }
+
+  function sampleBetaPdf(alpha, beta, sampleCount) {
+    const epsilon = 0.0001;
+    const samples = [];
+
+    for (let index = 0; index < sampleCount; index += 1) {
+      const rawX = sampleCount > 1 ? index / (sampleCount - 1) : 0.5;
+      const x = Math.min(1 - epsilon, Math.max(epsilon, rawX));
+      samples.push({
+        x: rawX,
+        density: betaPdf(x, alpha, beta),
+      });
+    }
+
+    return samples;
+  }
+
+  function betaPdf(x, alpha, beta) {
+    if (x <= 0 || x >= 1) {
+      return 0;
+    }
+
+    const logDensity = (alpha - 1) * Math.log(x) + (beta - 1) * Math.log(1 - x) - logBeta(alpha, beta);
+    const density = Math.exp(logDensity);
+    return Number.isFinite(density) ? density : 0;
+  }
+
+  function logBeta(alpha, beta) {
+    return logGamma(alpha) + logGamma(beta) - logGamma(alpha + beta);
+  }
+
+  function logGamma(value) {
+    const coefficients = [
+      676.5203681218851,
+      -1259.1392167224028,
+      771.3234287776531,
+      -176.6150291621406,
+      12.507343278686905,
+      -0.13857109526572012,
+      0.000009984369578019572,
+      0.00000015056327351493116,
+    ];
+
+    if (value < 0.5) {
+      return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * value)) - logGamma(1 - value);
+    }
+
+    let x = 0.9999999999998099;
+    const adjusted = value - 1;
+
+    coefficients.forEach((coefficient, index) => {
+      x += coefficient / (adjusted + index + 1);
+    });
+
+    const t = adjusted + coefficients.length - 0.5;
+    return 0.5 * Math.log(2 * Math.PI) + (adjusted + 0.5) * Math.log(t) - t + Math.log(x);
   }
 
   function validateOptions(optionA, optionB) {
@@ -4021,6 +4913,22 @@
       return text;
     }
     return `${text.slice(0, maxLength - 1)}...`;
+  }
+
+  function formatProbability(value, digits = 1) {
+    return `${(Math.max(0, Math.min(1, Number(value) || 0)) * 100).toFixed(digits)}%`;
+  }
+
+  function formatProportion(value, digits = 3) {
+    return Number.isFinite(value) ? Number(value).toFixed(digits) : "Unavailable";
+  }
+
+  function formatDecimal(value, digits = 4) {
+    return Number.isFinite(value) ? Number(value).toFixed(digits) : "Unavailable";
+  }
+
+  function pluralize(count, singular, plural = `${singular}s`) {
+    return count === 1 ? singular : plural;
   }
 
   function sanitizeArray(value, fallback = []) {
