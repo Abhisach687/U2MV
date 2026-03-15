@@ -38,7 +38,7 @@ What you should notice first:
 9. If you actually did the other action in real life, use the confirmation buttons in `Current Universe` to correct the archive.
 10. Open `History` to review the branch tree and branch log.
 11. Open `Profile` to see settings, achievements, mastery, and progression.
-12. Use `Guide` if you want the longer explanation, and use `Guide Me` if you want the app to point at the next important control.
+12. Use `Guide` if you want the calmer reference version of the route, and use `Guide Me` if you want the floating callout to point at the exact next control.
 
 ## What `Guide Me` Does
 
@@ -47,6 +47,8 @@ What you should notice first:
 - On first launch, it works as a formal tutorial mode layered onto the Bridge.
 - While the tutorial is incomplete, it resumes the exact next step, highlights the right control, and keeps the fast route clear.
 - After the basic tour is complete, it shifts into mission guidance and points you toward the next meaningful quest or exploration step.
+- It is separate from `Guide` / `Field Manual`, which stays calmer and more readable as the reference version of the route.
+- The floating callout stays aligned with the highlighted control during resize, scroll, and mobile visual-viewport changes, including text-box focus shifts on phones.
 - On mobile and desktop, it is meant to remove guessing rather than replace free exploration.
 
 ## What Is Required vs Optional
@@ -91,7 +93,7 @@ The estimator does not change the relay result. `Current Universe` is still wher
 
 ## The Four Main Screens
 
-- `Split`: the main Bridge console where you perform splits and follow the tutorial shell or mission guidance.
+- `Split`: the main Bridge console where you perform splits, follow the tutorial shell, and receive exact-control `Guide Me` callouts.
 - `History`: the archive timeline, branch log, import/export tools, and discovered lore.
 - `Profile`: settings, sound controls, mastery, diagnostics, the statistical estimator, achievements, and artifacts.
 - `Guide`: the calmer reference surface, plus a place to restart the tutorial route later.
@@ -113,13 +115,15 @@ At runtime, the app follows this loop:
 1. The browser loads the static shell from `index.html`, the styles from `styles.css`, and the runtime from `script.js`.
 2. `script.js` restores local state from browser storage and loads optional content from `content/*.json`.
 3. A tutorial-first shell appears on `Split` for first-time users and keeps the main route clear without hiding the rest of the Bridge.
-4. The `Split` screen shows two text boxes where you type two real actions.
-5. The app validates that both actions are meaningful and different enough to count as separate futures.
-6. When you press `Split Universe`, the app runs the relay sequence and maps the returned random bit to branch `A` or `B`.
-7. The `Current Universe` panel shows the relay assignment and the place where you confirm what you actually did.
-8. Your confirmation becomes the authoritative observation in history.
-9. The prediction card interprets confirmed history separately from the relay result, combining long-view synthesis with recent drift when enough confirmations exist.
-10. The app updates the archive, diagnostics, achievements, and guidance state.
+4. `Guide Me` can lock onto the exact next control, while `Guide` stays available as the calmer Field Manual version of the same route.
+5. The guide callout repositions during resize, scroll, and mobile visual-viewport shifts so the highlighted control stays readable when the page moves.
+6. The `Split` screen shows two text boxes where you type two real actions.
+7. The app validates that both actions are meaningful and different enough to count as separate futures.
+8. When you press `Split Universe`, the app runs the relay sequence and maps the returned random bit to branch `A` or `B`.
+9. The `Current Universe` panel shows the relay assignment and the place where you confirm what you actually did.
+10. Your confirmation becomes the authoritative observation in history.
+11. The prediction card interprets confirmed history separately from the relay result, combining long-view synthesis with recent drift when enough confirmations exist.
+12. The app updates the archive, diagnostics, achievements, and guidance state.
 
 In short:
 
@@ -249,6 +253,8 @@ Imported archives still restore into a sensible tutorial state: empty profiles r
 - hotspot interactions are buttons, so they remain keyboard accessible
 - the app always opens on `Split`
 - the start screen now uses a dedicated tutorial shell to guide the first successful split before pushing the optional adventure systems
+- `Guide Me` is the exact-control layer, while `Guide` stays the calmer Field Manual reference screen
+- the floating guide callout repositions on resize, scroll, and phone keyboard viewport shifts so it stays near the highlighted control
 - optional systems stay visible during tutorial mode, but they are visually softened instead of hidden
 - the weighted synthesis card on `Profile` has extra spacing below it so the diagnostics section breathes a little more
 
@@ -304,7 +310,7 @@ The app is made from three main parts:
 - `styles.css` makes it look like a sci-fi terminal
 - `script.js` runs the logic
 
-The JavaScript keeps state in memory and in browser storage. Rendering functions read that state and update the screen. The statistical estimator filters history down to confirmed branches and then calculates probabilities from those confirmed counts.
+The JavaScript keeps state in memory and in browser storage. Rendering functions read that state and update the screen. The guidance layer can highlight an exact control and keep the guide callout aligned even when scrolling, resizing, or opening the phone keyboard. The statistical estimator filters history down to confirmed branches and then calculates probabilities from those confirmed counts.
 
 ### High School
 
@@ -320,6 +326,7 @@ This means the app does not confuse:
 - a random relay outcome
 - your actual confirmed action
 - the model's best current guess
+- the guide layer that helps you reach the next control
 
 ### Undergraduate
 
@@ -330,6 +337,7 @@ Key ideas:
 - hydrate state from `localStorage` and `sessionStorage`
 - validate decisions before running the split sequence
 - separate assigned branch from observed branch
+- keep the exact-control guide overlay responsive to scroll, resize, and mobile visual-viewport changes
 - recompute UI from state after every meaningful action
 - keep the estimator derived-only so there is no extra persistence model to maintain
 

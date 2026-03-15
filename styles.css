@@ -2178,11 +2178,7 @@ textarea:focus-visible,
   }
 
   .guide-callout {
-    left: 0.75rem !important;
-    right: 0.75rem !important;
-    bottom: 0.85rem !important;
-    top: auto !important;
-    width: auto;
+    width: min(320px, calc(100vw - 1.5rem));
   }
 
   .settings-strip {

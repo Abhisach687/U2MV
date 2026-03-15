@@ -1681,6 +1681,9 @@
     const primeAudio = () => {
       getAudioEngine().prime();
     };
+    const refreshGuideViewport = () => {
+      window.requestAnimationFrame(() => refreshGuideCallout());
+    };
 
     document.addEventListener("pointerdown", primeAudio, { once: true, passive: true });
     document.addEventListener("keydown", primeAudio, { once: true });
@@ -1699,6 +1702,10 @@
 
     elements.optionA.addEventListener("input", handleDraftInput);
     elements.optionB.addEventListener("input", handleDraftInput);
+    [elements.optionA, elements.optionB].forEach((input) => {
+      input.addEventListener("focus", () => window.setTimeout(refreshGuideViewport, 140));
+      input.addEventListener("blur", () => window.setTimeout(refreshGuideViewport, 140));
+    });
     elements.nevermindButton.addEventListener("click", () => {
       getAudioEngine().uiTap();
       handleClearChamber();
@@ -1798,8 +1805,12 @@
       persistLocal();
     });
 
-    window.addEventListener("resize", () => refreshGuideCallout());
-    window.addEventListener("scroll", () => refreshGuideCallout(), { passive: true });
+    window.addEventListener("resize", refreshGuideViewport);
+    window.addEventListener("scroll", refreshGuideViewport, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", refreshGuideViewport);
+      window.visualViewport.addEventListener("scroll", refreshGuideViewport);
+    }
     window.addEventListener("pagehide", flushPersistedState);
   }
 
@@ -1955,15 +1966,17 @@
 
     const rect = target.getBoundingClientRect();
     const calloutRect = elements.guideCallout.getBoundingClientRect();
+    const viewportWidth = window.visualViewport?.width || window.innerWidth;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
     const gap = 14;
     let top = rect.bottom + gap;
     let left = rect.left + rect.width / 2 - calloutRect.width / 2;
 
-    if (top + calloutRect.height > window.innerHeight - 14) {
+    if (top + calloutRect.height > viewportHeight - 14) {
       top = Math.max(14, rect.top - calloutRect.height - gap);
     }
 
-    left = Math.min(window.innerWidth - calloutRect.width - 14, Math.max(14, left));
+    left = Math.min(viewportWidth - calloutRect.width - 14, Math.max(14, left));
 
     elements.guideCallout.style.top = `${top}px`;
     elements.guideCallout.style.left = `${left}px`;
