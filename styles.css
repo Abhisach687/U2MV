@@ -1258,8 +1258,10 @@ textarea:focus-visible,
 .timeline-frame {
   min-height: 440px;
   max-height: 68vh;
-  overflow: auto;
-  padding: 0.65rem;
+  margin-top: var(--space-4);
+  overflow-x: auto;
+  overflow-y: auto;
+  padding: var(--space-4) 0.65rem 0.65rem;
   border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(4, 13, 22, 0.94), rgba(3, 8, 14, 0.98));
@@ -1267,7 +1269,9 @@ textarea:focus-visible,
 }
 
 #timelineSvg {
-  width: 100%;
+  width: auto;
+  min-width: 100%;
+  max-width: none;
   min-height: 440px;
   display: block;
 }
@@ -2161,9 +2165,7 @@ textarea:focus-visible,
   }
 
   .tutorial-shell {
-    position: sticky;
-    top: 4.5rem;
-    z-index: 5;
+    position: static;
   }
 
   .tutorial-progress {

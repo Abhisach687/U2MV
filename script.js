@@ -2643,11 +2643,24 @@
   function renderTimeline() {
     const history = state.local.history.slice(-18);
     const svg = elements.timelineSvg;
+    const maxLabelLength = history.reduce((maxLength, entry) => {
+      return Math.max(maxLength, getEffectiveBranchText(entry).length);
+    }, 0);
+    const width = Math.max(1120, maxLabelLength * 22 + 600);
+    const centerX = width / 2;
+    const branchOffset = 220;
+    const leftX = centerX - branchOffset;
+    const rightX = centerX + branchOffset;
     svg.replaceChildren();
+
+    svg.setAttribute("viewBox", `0 0 ${width} 420`);
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", "420");
+    svg.style.width = `${width}px`;
 
     if (!history.length) {
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("x", "380");
+      text.setAttribute("x", String(centerX));
       text.setAttribute("y", "210");
       text.setAttribute("fill", "rgba(145, 185, 204, 0.88)");
       text.setAttribute("font-size", "22");
@@ -2658,7 +2671,6 @@
       return;
     }
 
-    const width = 760;
     const rowHeight = 94;
     const height = Math.max(420, history.length * rowHeight + 80);
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -2673,9 +2685,9 @@
     svg.appendChild(defs);
 
     const mainLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    mainLine.setAttribute("x1", "380");
+    mainLine.setAttribute("x1", String(centerX));
     mainLine.setAttribute("y1", "40");
-    mainLine.setAttribute("x2", "380");
+    mainLine.setAttribute("x2", String(centerX));
     mainLine.setAttribute("y2", String(height - 40));
     mainLine.setAttribute("stroke", "rgba(126, 240, 255, 0.28)");
     mainLine.setAttribute("stroke-width", "3");
@@ -2685,13 +2697,13 @@
     history.forEach((entry, index) => {
       const y = 70 + index * rowHeight;
       const branchRight = getEffectiveBranchKey(entry) === "B";
-      const x = branchRight ? 544 : 216;
-      const siblingX = branchRight ? 216 : 544;
+      const x = branchRight ? rightX : leftX;
+      const siblingX = branchRight ? leftX : rightX;
 
       const chosenPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       chosenPath.setAttribute(
         "d",
-        `M 380 ${y} C 392 ${y + 8}, ${x - (branchRight ? 28 : -28)} ${y + 18}, ${x} ${y + 24}`
+        `M ${centerX} ${y} C ${centerX + 12} ${y + 8}, ${x - (branchRight ? 28 : -28)} ${y + 18}, ${x} ${y + 24}`
       );
       chosenPath.setAttribute("fill", "none");
       chosenPath.setAttribute("stroke", branchRight ? "rgba(126, 240, 255, 0.92)" : "rgba(255, 196, 109, 0.94)");
@@ -2702,7 +2714,7 @@
       const siblingPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       siblingPath.setAttribute(
         "d",
-        `M 380 ${y} C 370 ${y + 6}, ${siblingX - (branchRight ? -18 : 18)} ${y + 14}, ${siblingX} ${y + 20}`
+        `M ${centerX} ${y} C ${centerX - 10} ${y + 6}, ${siblingX - (branchRight ? -18 : 18)} ${y + 14}, ${siblingX} ${y + 20}`
       );
       siblingPath.setAttribute("fill", "none");
       siblingPath.setAttribute("stroke", "rgba(145, 185, 204, 0.2)");
@@ -2726,11 +2738,11 @@
       label.setAttribute("font-size", "18");
       label.setAttribute("font-family", "Consolas, monospace");
       label.setAttribute("text-anchor", branchRight ? "start" : "end");
-      label.textContent = truncateLabel(getEffectiveBranchText(entry), 26);
+      label.textContent = getEffectiveBranchText(entry);
       svg.appendChild(label);
 
       const stamp = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      stamp.setAttribute("x", "380");
+      stamp.setAttribute("x", String(centerX));
       stamp.setAttribute("y", String(y - 12));
       stamp.setAttribute("fill", "rgba(145, 185, 204, 0.78)");
       stamp.setAttribute("font-size", "14");
@@ -4863,7 +4875,9 @@
   }
 
   function scrollTimelineToLatest() {
-    elements.timelineFrame.scrollTop = elements.timelineFrame.scrollHeight;
+    const { timelineFrame } = elements;
+    timelineFrame.scrollTop = timelineFrame.scrollHeight;
+    timelineFrame.scrollLeft = Math.max(0, (timelineFrame.scrollWidth - timelineFrame.clientWidth) / 2);
   }
 
   function delay(ms) {
